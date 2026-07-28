@@ -34,7 +34,7 @@ function App() {
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/profile" element={<Profile />} />
             </Route>
-            
+
             {/* Fallback route */}
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
