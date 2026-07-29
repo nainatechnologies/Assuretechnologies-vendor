@@ -12,6 +12,7 @@ const AddProduct = () => {
     title: '',
     description: '',
     price: '',
+    adminCommissionPct: '10',
     stock: '',
     image: 'https://placehold.co/60x40/png',
     fileName: 'No file chosen'
@@ -33,6 +34,11 @@ const AddProduct = () => {
     }
   };
 
+  const vendorPrice = parseFloat(formData.price) || 0;
+  const commissionPct = parseFloat(formData.adminCommissionPct) || 0;
+  const adminCommission = vendorPrice * (commissionPct / 100);
+  const totalPrice = vendorPrice + adminCommission;
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -40,7 +46,7 @@ const AddProduct = () => {
     addProduct({
       title: formData.title || 'Untitled Product',
       category: formData.category || 'Uncategorized',
-      price: parseFloat(formData.price) || 0,
+      price: totalPrice,
       stock: parseInt(formData.stock, 10) || 0,
       offer: 0,
       status: 'Active',
@@ -113,7 +119,7 @@ const AddProduct = () => {
 
             <div className="form-row">
               <div className="form-group col-half">
-                <label>Price</label>
+                <label>Base Price</label>
                 <input
                   type="number"
                   step="0.01"
@@ -123,6 +129,31 @@ const AddProduct = () => {
                   value={formData.price}
                   onChange={handleChange}
                   required
+                />
+              </div>
+              <div className="form-group col-half">
+                <label>Admin Commission (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  className="form-control"
+                  name="adminCommissionPct"
+                  value={formData.adminCommissionPct}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group col-half">
+                <label>Total Price</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={totalPrice > 0 ? `₹${totalPrice.toFixed(2)}` : ''}
+                  readOnly
+                  style={{ backgroundColor: 'var(--surface-2)', color: 'var(--primary)', fontWeight: 'bold' }}
                 />
               </div>
               <div className="form-group col-half">

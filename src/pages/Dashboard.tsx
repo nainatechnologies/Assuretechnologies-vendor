@@ -38,7 +38,7 @@ const Dashboard = () => {
         </Link>
 
         <Link to="/orders" className="card-link">
-          <div className="dashboard-card modern-card card-warning">
+          <div className="dashboard-card modern-card card-primary">
             <div className="card-icon-wrapper">
               <MdHourglassEmpty className="card-icon" />
             </div>
@@ -53,7 +53,7 @@ const Dashboard = () => {
         </Link>
 
         <Link to="/orders" className="card-link">
-          <div className="dashboard-card modern-card card-success">
+          <div className="dashboard-card modern-card card-primary">
             <div className="card-icon-wrapper">
               <MdCheckCircleOutline className="card-icon" />
             </div>
@@ -68,7 +68,7 @@ const Dashboard = () => {
         </Link>
 
         <Link to="/manage-stock" className="card-link">
-          <div className="dashboard-card modern-card card-danger">
+          <div className="dashboard-card modern-card card-primary">
             <div className="card-icon-wrapper">
               <MdErrorOutline className="card-icon" />
             </div>

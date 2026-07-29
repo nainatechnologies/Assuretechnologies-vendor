@@ -16,8 +16,11 @@ const Login = () => {
     <div className="login-container">
       <div className="login-box">
         <div className="login-header text-center mb-4">
+          <div className="vendor-logo-wrapper">
+            <MdLock className="vendor-logo-icon" />
+          </div>
           <h2 className="login-title mb-0">Vendor Login</h2>
-          <p className="text-muted mt-2">Welcome back! Please enter your details.</p>
+          <p className="login-subtitle mt-2">Welcome back! Please enter your details.</p>
         </div>
         <form onSubmit={handleLogin} className="login-form">
           <div className="form-group">

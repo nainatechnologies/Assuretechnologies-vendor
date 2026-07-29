@@ -93,7 +93,7 @@ const Products = () => {
       text: `Do you want to ${actionText} this product?`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#4F46E5',
+      confirmButtonColor: '#1D4ED8',
       cancelButtonColor: '#EF4444',
       confirmButtonText: 'Yes'
     }).then((result) => {
@@ -135,6 +135,10 @@ const Products = () => {
 
   return (
     <div className="page-container relative-container">
+      {/* Decorative background blobs */}
+      <div className="bg-blob blob-1"></div>
+      <div className="bg-blob blob-2"></div>
+
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="page-title mb-0">My Products</h2>
         <Link to="/add-product" className="btn btn-primary">
@@ -207,7 +211,7 @@ const Products = () => {
                     </div>
                   </td>
                   <td>
-                    <span className="badge" style={{ backgroundColor: product.status === 'Active' ? 'var(--success)' : 'var(--text-muted)', color: '#FFFFFF', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+                    <span className={`badge ${product.status === 'Active' ? 'badge-success' : 'badge-warning'}`}>
                       {product.status}
                     </span>
                   </td>

@@ -1,70 +1,107 @@
+/* ── Layout Shell ── */
 .layout-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background: var(--bg-color);
 }
 
+/* ── Top Navbar ── */
 .navbar {
-  background-color: var(--primary);
-  color: white;
+  background: var(--surface);
   display: flex;
   align-items: center;
-  padding: 0 32px;
-  height: 64px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0 36px;
+  height: 68px;
+  border-bottom: 1.5px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 50;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 12px rgba(29, 78, 216, 0.07);
+  transition: box-shadow 0.3s ease;
 }
 
+/* ── Brand ── */
 .navbar-brand {
-  margin-right: 48px;
+  margin-right: 40px;
 }
 
 .navbar-brand h2 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: white;
+  font-size: 1.375rem;
+  font-weight: 800;
+  color: var(--primary);
   margin: 0;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.04em;
 }
 
+.navbar-brand h2 span {
+  color: var(--secondary);
+}
+
+/* ── Nav Links ── */
 .navbar-nav {
   display: flex;
   list-style: none;
   flex: 1;
-  gap: 8px;
+  gap: 4px;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  color: rgba(255, 255, 255, 0.8);
-  font-weight: 500;
-  font-size: 0.9rem;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  gap: 7px;
+  padding: 9px 15px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 9px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: var(--surface-3);
+  color: var(--primary);
 }
 
 .nav-link.active {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
+  background: var(--primary-light);
+  color: var(--primary);
+  box-shadow: inset 0 0 0 1px rgba(29, 78, 216, 0.15);
+}
+
+.nav-link.active .nav-icon {
+  color: var(--primary);
 }
 
 .nav-icon {
   font-size: 1.25rem;
+  flex-shrink: 0;
+  transition: color 0.2s ease;
 }
 
+/* ── Right section ── */
 .navbar-right {
   display: flex;
   gap: 8px;
   align-items: center;
+  padding-left: 20px;
+  border-left: 1.5px solid var(--border);
+  margin-left: 8px;
+}
+
+.navbar-right .nav-link {
+  padding: 8px 14px;
+  font-size: 0.8375rem;
+}
+
+.navbar-right .text-danger {
+  color: var(--danger);
+}
+
+.navbar-right .text-danger:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
 }

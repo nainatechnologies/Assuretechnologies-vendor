@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Link, Outlet } from 'react-router-dom';
 import './Layout.css';
 import { 
   MdDashboard, 
@@ -14,9 +14,9 @@ const Layout = () => {
   return (
     <div className="layout-container">
       <nav className="navbar">
-        <div className="navbar-brand">
-          <h2>Naina-tech</h2>
-        </div>
+        <Link to="/dashboard" className="navbar-brand text-decoration-none">
+          <h2>Naina<span>-tech</span></h2>
+        </Link>
         
         <ul className="navbar-nav">
           <li className="nav-item">
@@ -55,7 +55,7 @@ const Layout = () => {
            <NavLink to="/profile" className="nav-link">
               <MdPerson className="nav-icon" /> Profile
            </NavLink>
-           <NavLink to="/login" className="nav-link text-warning">
+           <NavLink to="/login" className="nav-link text-danger">
               <MdLogout className="nav-icon" /> Logout
            </NavLink>
         </div>
