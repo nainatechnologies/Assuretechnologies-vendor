@@ -15,7 +15,7 @@ const Layout = () => {
     <div className="layout-container">
       <nav className="navbar">
         <Link to="/dashboard" className="navbar-brand text-decoration-none">
-          <h2>Naina<span>-tech</span></h2>
+          <h2>Assure<span> Vendor</span></h2>
         </Link>
         
         <ul className="navbar-nav">
@@ -40,11 +40,6 @@ const Layout = () => {
             </NavLink>
           </li>
           <li className="nav-item">
-            <NavLink to="/manage-stock" className={({isActive}) => isActive ? "nav-link active" : "nav-link"}>
-              <MdListAlt className="nav-icon" /> Manage Stock
-            </NavLink>
-          </li>
-          <li className="nav-item">
             <NavLink to="/inventory" className={({isActive}) => isActive ? "nav-link active" : "nav-link"}>
               <MdListAlt className="nav-icon" /> Inventory
             </NavLink>
@@ -55,7 +50,7 @@ const Layout = () => {
            <NavLink to="/profile" className="nav-link">
               <MdPerson className="nav-icon" /> Profile
            </NavLink>
-           <NavLink to="/login" className="nav-link text-danger">
+           <NavLink to="/login" className="nav-link text-warning">
               <MdLogout className="nav-icon" /> Logout
            </NavLink>
         </div>

@@ -59,8 +59,9 @@ const AddProduct = () => {
 
   return (
     <div className="page-container relative-container">
-      <div className="panel">
-        <div className="panel-header">
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        <div className="panel">
+          <div className="panel-header">
           <h2 className="panel-title">Add New Product</h2>
         </div>
         <div className="panel-body">
@@ -193,6 +194,7 @@ const AddProduct = () => {
             <button type="submit" className="btn btn-primary mt-2">Save Product</button>
           </form>
         </div>
+      </div>
       </div>
     </div>
   );

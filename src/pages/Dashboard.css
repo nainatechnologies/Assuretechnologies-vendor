@@ -1,18 +1,77 @@
-/* Dashboard specific layout */
-.dashboard-header {
+.dashboard-container {
+  padding: 16px 0;
+}
+
+.dashboard-title {
+  font-size: 1.35rem;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 24px;
+}
+
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.card-link {
+  text-decoration: none;
+  display: block;
+}
+
+.simple-card {
+  background: white;
+  border-radius: 12px;
+  padding: 32px 16px;
+  text-align: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease;
+  height: 100%;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  margin-bottom: 32px;
+  justify-content: center;
+  border: 1px solid #f3f4f6;
 }
 
-.dashboard-header h2 {
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.simple-card:hover {
+  transform: translateY(-2px);
 }
 
-.recent-orders-section .section-title {
-  color: var(--text-main);
+.simple-icon {
+  font-size: 2.2rem;
+  margin-bottom: 12px;
+}
+
+.icon-blue { color: #2563eb; }
+.icon-yellow { color: #f59e0b; }
+.icon-green { color: #10b981; }
+.icon-red { color: #ef4444; }
+
+.simple-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.simple-label {
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin: 0;
+}
+
+.recent-orders-section {
+  margin-top: 24px;
+}
+
+.recent-orders-box {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 24px;
+  color: #6b7280;
+  font-size: 0.95rem;
 }

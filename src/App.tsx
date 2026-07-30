@@ -8,7 +8,6 @@ import Dashboard from './pages/Dashboard';
 import AddProduct from './pages/AddProduct';
 import Products from './pages/Products';
 import Orders from './pages/Orders';
-import ManageStock from './pages/ManageStock';
 import Inventory from './pages/Inventory';
 import Profile from './pages/Profile';
 import { ProductProvider } from './context/ProductContext';
@@ -30,7 +29,6 @@ function App() {
               <Route path="/add-product" element={<AddProduct />} />
               <Route path="/products" element={<Products />} />
               <Route path="/orders" element={<Orders />} />
-              <Route path="/manage-stock" element={<ManageStock />} />
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/profile" element={<Profile />} />
             </Route>

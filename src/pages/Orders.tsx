@@ -95,24 +95,179 @@ const Orders = () => {
 
   const handleTrack = (orderId: string) => {
     Swal.fire({
-      title: '<div style="color: var(--text-main); font-weight: 700; font-size: 1.25rem; letter-spacing: -0.02em; margin-bottom: 10px;">Tracking Details</div>',
+      title: '',
       html: `
-        <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 10px; padding: 10px 0;">
-          <input id="swal-input1" class="form-control" placeholder="Transport Name">
-          <input id="swal-input2" class="form-control" placeholder="Tracking ID">
+        <style>
+          .track-modal-header {
+            background: linear-gradient(135deg, #1D4ED8 0%, #0EA5E9 100%);
+            margin: -20px -20px 0 -20px;
+            padding: 28px 24px 24px;
+            border-radius: 12px 12px 0 0;
+            text-align: center;
+          }
+          .track-modal-truck-icon {
+            width: 64px;
+            height: 64px;
+            background: rgba(255,255,255,0.18);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 14px;
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255,255,255,0.3);
+          }
+          .track-modal-title {
+            color: #fff;
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin: 0;
+          }
+          .track-modal-subtitle {
+            color: rgba(255,255,255,0.78);
+            font-size: 0.82rem;
+            margin-top: 4px;
+          }
+          .track-form-body {
+            padding: 24px 4px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+          }
+          .track-field-group {
+            text-align: left;
+          }
+          .track-field-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #1E3A5F;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+          }
+          .track-field-label svg {
+            flex-shrink: 0;
+          }
+          .track-input-wrapper {
+            position: relative;
+          }
+          .track-input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6B7EA0;
+            display: flex;
+            align-items: center;
+            pointer-events: none;
+          }
+          .track-input {
+            width: 100%;
+            padding: 12px 16px 12px 42px;
+            border: 1.5px solid #D1DEFF;
+            border-radius: 10px;
+            font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+            font-size: 0.9rem;
+            color: #0F1B3D;
+            background: #F8FAFF;
+            transition: all 0.25s ease;
+            outline: none;
+            box-sizing: border-box;
+          }
+          .track-input:focus {
+            border-color: #1D4ED8;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(29,78,216,0.12);
+          }
+          .track-input::placeholder {
+            color: #A0AEC0;
+          }
+          .track-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #D1DEFF 30%, #D1DEFF 70%, transparent);
+            margin: 4px 0;
+          }
+          .track-info-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #EFF4FF;
+            border: 1px solid #BFDBFE;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.8rem;
+            color: #1D4ED8;
+          }
+        </style>
+        <div class="track-modal-header">
+          <div class="track-modal-truck-icon">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="1" y="3" width="15" height="13" rx="1"/>
+              <path d="M16 8h4l3 3v5h-7V8z"/>
+              <circle cx="5.5" cy="18.5" r="2.5"/>
+              <circle cx="18.5" cy="18.5" r="2.5"/>
+            </svg>
+          </div>
+          <p class="track-modal-title">Add Tracking Details</p>
+          <p class="track-modal-subtitle">Enter shipment information for this order</p>
+        </div>
+        <div class="track-form-body">
+          <div class="track-field-group">
+            <div class="track-field-label">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              Transport / Courier Name
+            </div>
+            <div class="track-input-wrapper">
+              <span class="track-input-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              </span>
+              <input id="swal-input1" class="track-input" placeholder="e.g. DTDC, FedEx, Blue Dart…" autocomplete="off"/>
+            </div>
+          </div>
+          <div class="track-divider"></div>
+          <div class="track-field-group">
+            <div class="track-field-label">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              Tracking ID / AWB Number
+            </div>
+            <div class="track-input-wrapper">
+              <span class="track-input-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+              </span>
+              <input id="swal-input2" class="track-input" placeholder="e.g. 1234567890" autocomplete="off"/>
+            </div>
+          </div>
+          <div class="track-info-bar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Tracking info will be visible to the customer after saving.
+          </div>
         </div>
       `,
       focusConfirm: false,
       showCancelButton: true,
-      confirmButtonColor: 'var(--primary)',
-      cancelButtonColor: 'var(--text-muted)',
-      confirmButtonText: 'Confirm',
+      confirmButtonColor: '#1D4ED8',
+      cancelButtonColor: '#6B7EA0',
+      confirmButtonText: '🚀 &nbsp;Save Tracking',
       cancelButtonText: 'Cancel',
+      width: '460px',
+      padding: '20px',
+      customClass: {
+        popup: 'track-swal-popup',
+        confirmButton: 'track-swal-confirm',
+        cancelButton: 'track-swal-cancel',
+      },
       preConfirm: () => {
-        const transportName = (document.getElementById('swal-input1') as HTMLInputElement).value;
-        const trackId = (document.getElementById('swal-input2') as HTMLInputElement).value;
+        const transportName = (document.getElementById('swal-input1') as HTMLInputElement).value.trim();
+        const trackId = (document.getElementById('swal-input2') as HTMLInputElement).value.trim();
         if (!transportName || !trackId) {
-          Swal.showValidationMessage('Please enter both Transport Name and Track ID');
+          Swal.showValidationMessage(
+            '<span style="display:flex;align-items:center;gap:6px;font-size:0.85rem;">⚠️ Please fill in both Transport Name and Tracking ID.</span>'
+          );
+          return false;
         }
         return { transportName, trackId };
       }
@@ -120,7 +275,14 @@ const Orders = () => {
       if (result.isConfirmed) {
         const { transportName, trackId } = result.value;
         setOrders(orders.map(o => o.id === orderId ? { ...o, transportName, trackId } : o));
-        Swal.fire('Tracked!', `Track ID: ${trackId} saved.`, 'success');
+        Swal.fire({
+          icon: 'success',
+          title: 'Tracking Saved!',
+          html: `<span style="font-size:0.9rem;color:#1E3A5F;">Track ID <strong>${trackId}</strong> via <strong>${transportName}</strong> has been saved successfully.</span>`,
+          confirmButtonColor: '#1D4ED8',
+          confirmButtonText: 'Done',
+          width: '400px'
+        });
       }
     });
   };
