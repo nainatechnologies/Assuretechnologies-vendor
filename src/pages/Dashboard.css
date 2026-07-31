@@ -1,19 +1,8 @@
-.dashboard-container {
-  padding: 16px 0;
-}
-
-.dashboard-title {
-  font-size: 1.35rem;
-  font-weight: 500;
-  color: #111827;
-  margin-bottom: 24px;
-}
-
 .dashboard-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 24px;
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 }
 
 .card-link {
@@ -21,57 +10,68 @@
   display: block;
 }
 
-.simple-card {
-  background: white;
-  border-radius: 12px;
-  padding: 32px 16px;
-  text-align: center;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  transition: transform 0.2s ease;
-  height: 100%;
+/* Vibrant Light Cards */
+.vibrant-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+  height: 100%;
+}
+
+.vibrant-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.vibrant-icon-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #f3f4f6;
-}
-
-.simple-card:hover {
-  transform: translateY(-2px);
-}
-
-.simple-icon {
-  font-size: 2.2rem;
-  margin-bottom: 12px;
-}
-
-.icon-blue { color: #2563eb; }
-.icon-yellow { color: #f59e0b; }
-.icon-green { color: #10b981; }
-.icon-red { color: #ef4444; }
-
-.simple-value {
   font-size: 1.75rem;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 8px 0;
+  margin-bottom: 20px;
 }
 
-.simple-label {
+/* Vibrant Color Combinations using Global Tokens */
+.vibrant-info {
+  background-color: var(--info-bg);
+  color: var(--info);
+}
+
+.vibrant-warning {
+  background-color: var(--warning-bg);
+  color: var(--warning);
+}
+
+.vibrant-success {
+  background-color: var(--success-bg);
+  color: var(--success);
+}
+
+.vibrant-danger {
+  background-color: var(--danger-bg);
+  color: var(--danger);
+}
+
+.vibrant-details h3 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0 0 4px 0;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.vibrant-details p {
   font-size: 0.9rem;
-  color: #4b5563;
+  color: var(--text-muted);
   margin: 0;
-}
-
-.recent-orders-section {
-  margin-top: 24px;
-}
-
-.recent-orders-box {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 24px;
-  color: #6b7280;
-  font-size: 0.95rem;
+  font-weight: 600;
 }

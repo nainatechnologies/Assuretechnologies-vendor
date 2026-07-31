@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { MdClose } from 'react-icons/md';
 import Swal from 'sweetalert2';
 import { useProductContext } from '../context/ProductContext';
@@ -10,16 +10,27 @@ const Products = () => {
   const { products, updateProduct, toggleProductStatus, deleteProduct } = useProductContext();
   
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [stockUpdates, setStockUpdates] = useState<Record<string, number>>({});
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState({
     title: '',
     price: '',
-    description: ''
+    category: '',
+    offer: ''
   });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [stockFilter, setStockFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const location = useLocation();
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('filter') === 'low-stock') {
+      setStockFilter('Low Stock');
+    }
+  }, [location.search]);
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -30,6 +41,8 @@ const Products = () => {
       matchesStock = product.stock > 0;
     } else if (stockFilter === 'Out of Stock') {
       matchesStock = product.stock === 0;
+    } else if (stockFilter === 'Low Stock') {
+      matchesStock = product.stock < 10;
     }
     
     return matchesSearch && matchesStock;
@@ -50,15 +63,26 @@ const Products = () => {
 
   const handleEditClick = (product: Product) => {
     setEditingProduct(product);
+    setPreviewImage(null);
     setEditFormData({
       title: product.title,
       price: product.price.toString(),
-      description: ''
+      category: product.category,
+      offer: product.offer.toString()
     });
   };
 
   const handleCloseModal = () => {
     setEditingProduct(null);
+    setPreviewImage(null);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const imageUrl = URL.createObjectURL(file);
+      setPreviewImage(imageUrl);
+    }
   };
 
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -70,9 +94,13 @@ const Products = () => {
     if (editingProduct) {
       updateProduct(editingProduct.id, {
         title: editFormData.title,
-        price: parseFloat(editFormData.price) || 0
+        price: parseFloat(editFormData.price) || 0,
+        category: editFormData.category,
+        offer: parseFloat(editFormData.offer) || 0,
+        ...(previewImage && { image: previewImage })
       });
       setEditingProduct(null);
+      setPreviewImage(null);
       
       Swal.fire({
         icon: 'success',
@@ -133,6 +161,26 @@ const Products = () => {
     });
   };
 
+  const handleSaveStock = (id: string, currentStock: number) => {
+    const newStock = stockUpdates[id] !== undefined ? stockUpdates[id] : currentStock;
+    updateProduct(id, { stock: newStock });
+    
+    // Clear the local override so it tracks the context value again (optional, but good practice)
+    setStockUpdates(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Stock Updated!',
+      text: 'The product stock has been successfully updated.',
+      timer: 1500,
+      showConfirmButton: false
+    });
+  };
+
   return (
     <div className="page-container relative-container">
       {/* Decorative background blobs */}
@@ -164,6 +212,7 @@ const Products = () => {
           >
             <option value="All">All Stock</option>
             <option value="In Stock">In Stock</option>
+            <option value="Low Stock">Low Stock</option>
             <option value="Out of Stock">Out of Stock</option>
           </select>
         </div>
@@ -204,8 +253,19 @@ const Products = () => {
                   <td>₹{product.offer.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                   <td>
                     <div className="d-flex align-items-center" style={{ gap: '4px' }}>
-                      <input type="number" className="form-control" style={{ width: '70px', padding: '6px' }} defaultValue={product.stock} />
-                      <button className="btn btn-secondary btn-sm" style={{ padding: '6px 8px' }} title="Save Stock">
+                      <input 
+                        type="number" 
+                        className="form-control" 
+                        style={{ width: '70px', padding: '6px' }} 
+                        value={stockUpdates[product.id] !== undefined ? stockUpdates[product.id] : product.stock}
+                        onChange={(e) => setStockUpdates(prev => ({ ...prev, [product.id]: parseInt(e.target.value) || 0 }))}
+                      />
+                      <button 
+                        className="btn btn-secondary btn-sm" 
+                        style={{ padding: '6px 8px' }} 
+                        title="Save Stock"
+                        onClick={() => handleSaveStock(product.id, product.stock)}
+                      >
                         ✓
                       </button>
                     </div>
@@ -276,80 +336,147 @@ const Products = () => {
       {/* Edit Modal */}
       {editingProduct && (
         <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>Edit Product</h3>
-              <button className="btn-close" onClick={handleCloseModal}>
-                <MdClose />
+          <div className="modal-content" style={{ maxWidth: '700px', borderRadius: '16px', overflow: 'hidden', padding: 0 }}>
+            
+            {/* Modal Header */}
+            <div style={{ background: 'linear-gradient(135deg, var(--primary), var(--info))', padding: '24px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#fff' }}>
+                <div style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>Edit Product</h3>
+                  <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>ID: {editingProduct.id}</span>
+                </div>
+              </div>
+              <button 
+                onClick={handleCloseModal}
+                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+              >
+                <MdClose size={20} />
               </button>
             </div>
-            <div className="modal-body">
-              <div className="form-row">
-                <div className="col-half">
-                  <div className="form-group">
-                    <label>Current Banner</label>
-                    <div style={{ width: '120px', height: '80px', background: '#f1f5f9', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden', marginBottom: '16px' }}>
-                      <img src={editingProduct.image} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '32px', background: '#fff' }}>
+              <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
+                
+                {/* Left Column - Images */}
+                <div style={{ flex: '0 0 220px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '12px' }}>Product Banner</label>
+                  <div style={{ 
+                    width: '100%', aspectRatio: '4/3', background: '#f8fafc', border: '1px dashed #cbd5e1', 
+                    borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', position: 'relative',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <img src={previewImage || editingProduct.image} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.7rem', padding: '4px 8px', borderRadius: '4px' }}>{previewImage ? 'Preview' : 'Current'}</div>
                   </div>
                   
-                  <div className="form-group">
-                    <label>Replace Banner</label>
-                    <div className="d-flex align-items-center" style={{ gap: '8px', border: '1px solid var(--border)', padding: '6px', borderRadius: '6px' }}>
-                      <button className="btn btn-secondary btn-sm">Choose File</button>
-                      <span className="text-muted" style={{ fontSize: '0.8125rem' }}>No file chosen</span>
-                    </div>
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>Other Product Images</label>
-                    <div className="d-flex align-items-center" style={{ gap: '8px', border: '1px solid var(--border)', padding: '6px', borderRadius: '6px' }}>
-                      <button className="btn btn-secondary btn-sm">Choose Files</button>
-                      <span className="text-muted" style={{ fontSize: '0.8125rem' }}>No file chosen</span>
-                    </div>
+                  <div className="d-flex align-items-center" style={{ gap: '8px', border: '1px solid #e2e8f0', padding: '4px', borderRadius: '8px', background: '#f8fafc' }}>
+                    <label style={{ margin: 0, cursor: 'pointer' }}>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        style={{ display: 'none' }} 
+                        onChange={handleImageChange}
+                      />
+                      <span className="btn btn-secondary btn-sm" style={{ padding: '6px 12px', fontSize: '0.8rem', background: '#fff', border: '1px solid #e2e8f0' }}>Replace</span>
+                    </label>
+                    <span className="text-muted" style={{ fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {previewImage ? 'File selected' : 'No file selected'}
+                    </span>
                   </div>
                 </div>
                 
-                <div className="col-half">
-                  <div className="form-group">
-                    <label>Product Name</label>
+                {/* Right Column - Details */}
+                <div style={{ flex: 1, minWidth: '300px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>Product Title</label>
                     <input 
                       type="text" 
                       className="form-control" 
                       name="title"
                       value={editFormData.title}
                       onChange={handleEditChange}
+                      style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', background: '#f8fafc' }}
                     />
                   </div>
                   
-                  <div className="form-group">
-                    <label>Price</label>
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      className="form-control" 
-                      name="price"
-                      value={editFormData.price}
-                      onChange={handleEditChange}
-                    />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>Selling Price (₹)</label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        className="form-control" 
+                        name="price"
+                        value={editFormData.price}
+                        onChange={handleEditChange}
+                        style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', background: '#f8fafc' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>Status</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        value={editingProduct.status}
+                        disabled
+                        style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', background: '#e2e8f0', color: '#64748b' }}
+                      />
+                    </div>
                   </div>
                   
-                  <div className="form-group">
-                    <label>Description</label>
-                    <textarea 
-                      className="form-control" 
-                      rows={4}
-                      name="description"
-                      value={editFormData.description}
-                      onChange={handleEditChange}
-                    ></textarea>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>Category</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        name="category"
+                        value={editFormData.category}
+                        onChange={handleEditChange}
+                        style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', background: '#f8fafc' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>Offer Price (₹)</label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        className="form-control" 
+                        name="offer"
+                        value={editFormData.offer}
+                        onChange={handleEditChange}
+                        style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', background: '#f8fafc' }}
+                      />
+                    </div>
                   </div>
+
                 </div>
               </div>
             </div>
-            <div className="modal-footer">
-              <button className="btn btn-primary" onClick={handleSaveEdit}>Save Changes</button>
+            
+            {/* Modal Footer */}
+            <div style={{ padding: '16px 32px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={handleCloseModal}
+                style={{ padding: '10px 24px', borderRadius: '8px', fontWeight: 600, background: '#fff', border: '1px solid #cbd5e1', color: '#475569' }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleSaveEdit}
+                style={{ padding: '10px 24px', borderRadius: '8px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                Save Changes
+              </button>
             </div>
+
           </div>
         </div>
       )}

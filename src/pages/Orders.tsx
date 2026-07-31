@@ -1,4 +1,5 @@
 import { useState } from 'react';
+
 import Swal from 'sweetalert2';
 import { MdRemoveRedEye } from 'react-icons/md';
 
@@ -18,6 +19,7 @@ interface Order {
   status: OrderStatus;
   transportName?: string;
   trackId?: string;
+  trackUrl?: string;
 }
 
 const Orders = () => {
@@ -65,9 +67,33 @@ const Orders = () => {
   ]);
 
   const [activeTab, setActiveTab] = useState<OrderStatus>('New');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState('All');
   const tabs: OrderStatus[] = ['New', 'Accepted', 'Out for Delivery', 'Completed'];
 
-  const filteredOrders = orders.filter(order => order.status === activeTab);
+  const filteredOrders = orders.filter(order => {
+    if (order.status !== activeTab) return false;
+    
+    if (activeTab === 'Completed' && paymentFilter !== 'All') {
+      if (order.paymentStatus !== paymentFilter) return false;
+    }
+    
+    if (!searchQuery) return true;
+    
+    const query = searchQuery.toLowerCase();
+    return (
+      order.id.toLowerCase().includes(query) ||
+      order.date.toLowerCase().includes(query) ||
+      order.user.toLowerCase().includes(query) ||
+      order.mobile.toLowerCase().includes(query) ||
+      order.email.toLowerCase().includes(query) ||
+      order.address.toLowerCase().includes(query) ||
+      order.pincode.toLowerCase().includes(query) ||
+      order.totalAmount.toString().includes(query) ||
+      order.paymentMethod.toLowerCase().includes(query) ||
+      order.paymentStatus.toLowerCase().includes(query)
+    );
+  });
 
   const showTrackColumn = activeTab === 'Accepted' || activeTab === 'Out for Delivery' || activeTab === 'Completed';
 
@@ -241,6 +267,19 @@ const Orders = () => {
               <input id="swal-input2" class="track-input" placeholder="e.g. 1234567890" autocomplete="off"/>
             </div>
           </div>
+          <div class="track-divider"></div>
+          <div class="track-field-group">
+            <div class="track-field-label">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+              Tracking URL (Optional)
+            </div>
+            <div class="track-input-wrapper">
+              <span class="track-input-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3m-1 5h8"/></svg>
+              </span>
+              <input id="swal-input3" class="track-input" placeholder="e.g. https://www.dtdc.in/tracking" autocomplete="off"/>
+            </div>
+          </div>
           <div class="track-info-bar">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             Tracking info will be visible to the customer after saving.
@@ -263,18 +302,19 @@ const Orders = () => {
       preConfirm: () => {
         const transportName = (document.getElementById('swal-input1') as HTMLInputElement).value.trim();
         const trackId = (document.getElementById('swal-input2') as HTMLInputElement).value.trim();
+        const trackUrl = (document.getElementById('swal-input3') as HTMLInputElement).value.trim();
         if (!transportName || !trackId) {
           Swal.showValidationMessage(
             '<span style="display:flex;align-items:center;gap:6px;font-size:0.85rem;">⚠️ Please fill in both Transport Name and Tracking ID.</span>'
           );
           return false;
         }
-        return { transportName, trackId };
+        return { transportName, trackId, trackUrl };
       }
     }).then((result) => {
       if (result.isConfirmed) {
-        const { transportName, trackId } = result.value;
-        setOrders(orders.map(o => o.id === orderId ? { ...o, transportName, trackId } : o));
+        const { transportName, trackId, trackUrl } = result.value;
+        setOrders(orders.map(o => o.id === orderId ? { ...o, transportName, trackId, trackUrl } : o));
         Swal.fire({
           icon: 'success',
           title: 'Tracking Saved!',
@@ -339,7 +379,28 @@ const Orders = () => {
 
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="page-title mb-0">Product Orders</h2>
-        <button className="btn btn-primary btn-sm">Export CSV</button>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          {activeTab === 'Completed' && (
+            <select 
+              className="form-control" 
+              style={{ width: 'auto', borderRadius: '6px', padding: '6px 12px', fontSize: '0.9rem', border: '1px solid #cbd5e1' }}
+              value={paymentFilter}
+              onChange={(e) => setPaymentFilter(e.target.value)}
+            >
+              <option value="All">All Payment Status</option>
+              <option value="Pending">Pending</option>
+              <option value="Completed">Completed</option>
+            </select>
+          )}
+          <input 
+            type="text" 
+            className="form-control" 
+            placeholder="Search orders..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ width: '280px', borderRadius: '6px', padding: '6px 12px', fontSize: '0.9rem', border: '1px solid #cbd5e1' }}
+          />
+        </div>
       </div>
 
       <div className="panel mb-4">

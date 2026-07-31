@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { MdAttachMoney, MdDateRange, MdTrendingUp, MdRemoveRedEye } from 'react-icons/md';
 import Swal from 'sweetalert2';
 
 const Inventory = () => {
+  const [timeFilter, setTimeFilter] = useState('Last 7 Days');
+  const [statusFilter, setStatusFilter] = useState('All');
   // Dummy stats for money received (updated for networking/IoT scale)
   const moneyStats = [
     { label: 'Received This Week', value: '₹1,24,500', icon: <MdAttachMoney />, color: '#10B981' },
@@ -35,11 +38,11 @@ const Inventory = () => {
       customerNumber: '8877665544',
       amount: 24000,
       deliveryDate: '29 Jul 2026',
-      status: 'Pending COD',
-      adminReceived: false,
+      status: 'Pending Admin Payout',
+      adminReceived: true,
       vendorReceived: false,
       proofFileName: 'Pending_Receipt.png',
-      referenceNote: 'Awaiting cash on delivery collection.'
+      referenceNote: 'Verified by Admin, payout pending.'
     },
     {
       id: 'ORD-8003',
@@ -69,7 +72,8 @@ const Inventory = () => {
       adminReceived: true,
       vendorReceived: true,
       proofFileName: 'Settlement_8004.pdf',
-      referenceNote: 'Fully settled and completed.'
+      referenceNote: 'Fully settled and completed.',
+      paymentDate: '01 Aug 2026'
     }
   ];
 
@@ -189,11 +193,19 @@ const Inventory = () => {
       </style>
       
       <div class="upload-container">
-        <div class="paying-box">
-          <span>Payment</span>
-          <h3>₹${item.amount.toLocaleString('en-IN')}</h3>
+        <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+          <div class="paying-box" style="margin-bottom: 0; flex: 1;">
+            <span>Payment</span>
+            <h3>₹${item.amount.toLocaleString('en-IN')}</h3>
+          </div>
+          ${item.status === 'Completed' && item.paymentDate ? `
+          <div style="flex: 1; border: 1px solid #a7f3d0; border-radius: 8px; padding: 16px; background: #ecfdf5;">
+            <span style="color: #059669; font-size: 0.9rem; font-weight: 500;">Payment Completed Date</span>
+            <h3 style="margin: 4px 0 0 0; color: #065f46; font-size: 1.15rem; font-weight: 700;">${item.paymentDate}</h3>
+          </div>
+          ` : ''}
         </div>
-
+        ${item.status === 'Completed' ? `
         <label class="upload-label">Payment Proof</label>
         <div class="file-box">
           <div class="file-info">
@@ -206,11 +218,12 @@ const Inventory = () => {
             </svg>
             ${item.proofFileName}
           </div>
-          <button type="button" class="view-btn" onclick="window.showPaymentProof('${item.proofFileName}')">View</button>
+          <button type="button" class="view-btn" onclick="window.open('https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', '_blank')">View</button>
         </div>
 
-        <label class="upload-label">Reference Note (Optional)</label>
+        <label class="upload-label">Reference Note</label>
         <input type="text" class="reference-input" value="${item.referenceNote}" readonly />
+        ` : ''}
       </div>
 
       <table class="modal-table">
@@ -254,6 +267,37 @@ const Inventory = () => {
     });
   };
 
+  const getFilteredPayments = () => {
+    let data = pendingPayments;
+
+    // Filter by explicitly allowed statuses as requested
+    data = data.filter(item => item.status === 'Pending Admin Payout' || item.status === 'Completed');
+
+    if (statusFilter !== 'All') {
+      data = data.filter(item => item.status.includes(statusFilter));
+    }
+
+    if (timeFilter !== 'All Time') {
+      data = data.filter(item => {
+        const itemDate = new Date(item.orderDate);
+        const now = new Date();
+        const diffTime = Math.abs(now.getTime() - itemDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (timeFilter === 'Last 7 Days') return diffDays <= 7;
+        if (timeFilter === 'Last 30 Days') return diffDays <= 30;
+        if (timeFilter === 'This Month') {
+          return itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
+        }
+        return true;
+      });
+    }
+
+    return data;
+  };
+
+  const filteredPayments = getFilteredPayments();
+
   return (
     <div className="page-container relative-container">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -287,61 +331,93 @@ const Inventory = () => {
           </div>
         ))}
       </div>
+      <div className="bg-blob blob-1"></div>
+      <div className="bg-blob blob-2"></div>
 
-      <h2 className="page-title mb-4" style={{ fontSize: '1.25rem' }}>Delivered & Pending Payment</h2>
-      <div className="table-container modern-table-container mb-5">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Order Date</th>
-              <th>Customer</th>
-              <th>Contact Number</th>
-              <th>Delivery Date</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th style={{ textAlign: 'center' }}>View</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pendingPayments.length === 0 ? (
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="page-title mb-0" style={{ fontSize: '1.25rem' }}>Delivered & Pending Payment</h2>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <select
+            className="form-control"
+            style={{ width: 'auto', display: 'inline-block', fontSize: '0.9rem', padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+            value={timeFilter}
+            onChange={(e) => setTimeFilter(e.target.value)}
+          >
+            <option value="Last 7 Days">Last 7 Days</option>
+            <option value="Last 30 Days">Last 30 Days</option>
+            <option value="This Month">This Month</option>
+            <option value="All Time">All Time</option>
+          </select>
+
+          <select
+            className="form-control"
+            style={{ width: 'auto', display: 'inline-block', fontSize: '0.9rem', padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="All Statuses">All Statuses</option>
+            <option value="Pending Admin Payout">Pending Admin Payout</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="modern-table-container" style={{ border: 'none', borderRadius: '16px', boxShadow: 'none' }}>
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan={8} className="text-center py-5 text-muted">No pending payments.</td>
+                <th>Order ID</th>
+                <th>Ordered Date</th>
+                <th>Customer</th>
+                <th>Contact</th>
+                <th>Delivery Date</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th style={{ textAlign: 'center' }}>Details</th>
               </tr>
-            ) : (
-              pendingPayments.map((item) => (
-                <tr key={item.id}>
-                  <td className="font-weight-500">{item.id}</td>
-                  <td>{item.orderDate}</td>
-                  <td>{item.customer}</td>
-                  <td>{item.customerNumber}</td>
-                  <td>{item.deliveryDate}</td>
-                  <td className="font-weight-500 text-danger">₹{item.amount.toLocaleString('en-IN')}</td>
-                  <td>
-                    <span
-                      className={`badge ${item.status === 'Completed' ? 'badge-success' : 'badge-warning'}`}
-                      style={item.status !== 'Completed' ? {
-                        backgroundColor: item.adminReceived ? '#DBEAFE' : undefined,
-                        color: item.adminReceived ? '#1E40AF' : undefined
-                      } : undefined}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      style={{ padding: '6px 10px' }}
-                      title="View Details"
-                      onClick={() => handleView(item)}
-                    >
-                      <MdRemoveRedEye size={18} style={{ color: 'var(--primary)' }} />
-                    </button>
-                  </td>
+            </thead>
+            <tbody>
+              {filteredPayments.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-5 text-muted">No pending payments.</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                filteredPayments.map((item) => (
+                  <tr key={item.id}>
+                    <td className="font-weight-500">{item.id}</td>
+                    <td>{item.orderDate}</td>
+                    <td>{item.customer}</td>
+                    <td>{item.customerNumber}</td>
+                    <td>{item.deliveryDate}</td>
+                    <td className="font-weight-500 text-danger">₹{item.amount.toLocaleString('en-IN')}</td>
+                    <td>
+                      <span
+                        className={`badge ${item.status === 'Completed' ? 'badge-success' : 'badge-warning'}`}
+                        style={item.status !== 'Completed' ? {
+                          backgroundColor: item.adminReceived ? '#DBEAFE' : undefined,
+                          color: item.adminReceived ? '#1E40AF' : undefined
+                        } : undefined}>
+                        {item.status}
+                      </span>
+                    </td>
+
+                    <td style={{ textAlign: 'center' }}>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        style={{ padding: '6px 10px' }}
+                        title="View Details"
+                        onClick={() => handleView(item)}
+                      >
+                        <MdRemoveRedEye size={18} style={{ color: 'var(--primary)' }} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

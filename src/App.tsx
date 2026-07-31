@@ -10,6 +10,7 @@ import Products from './pages/Products';
 import Orders from './pages/Orders';
 import Inventory from './pages/Inventory';
 import Profile from './pages/Profile';
+import TrackOrder from './pages/TrackOrder';
 import { ProductProvider } from './context/ProductContext';
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ function App() {
               <Route path="/orders" element={<Orders />} />
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/track-order/:id" element={<TrackOrder />} />
             </Route>
 
             {/* Fallback route */}
