@@ -41,7 +41,7 @@ const Layout = () => {
           </li>
           <li className="nav-item">
             <NavLink to="/inventory" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-              <MdListAlt className="nav-icon" /> Inventory
+              <MdListAlt className="nav-icon" /> Payouts
             </NavLink>
           </li>
         </ul>

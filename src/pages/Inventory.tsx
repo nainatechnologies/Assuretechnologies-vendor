@@ -4,7 +4,7 @@ import Swal from 'sweetalert2';
 
 const Inventory = () => {
   const [timeFilter, setTimeFilter] = useState('Last 7 Days');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All Statuses');
   // Dummy stats for money received (updated for networking/IoT scale)
   const moneyStats = [
     { label: 'Received This Week', value: '₹1,24,500', icon: <MdAttachMoney />, color: '#10B981' },
@@ -74,6 +74,52 @@ const Inventory = () => {
       proofFileName: 'Settlement_8004.pdf',
       referenceNote: 'Fully settled and completed.',
       paymentDate: '01 Aug 2026'
+    },
+    {
+      id: 'ORD-8005',
+      orderDate: '01 Aug 2026',
+      product: 'Logitech C920 Pro HD Webcam',
+      quantity: 10,
+      customer: 'Office Supplies Inc',
+      customerNumber: '5544332211',
+      amount: 150000,
+      deliveryDate: '03 Aug 2026',
+      status: 'Pending Admin Payout',
+      adminReceived: true,
+      vendorReceived: false,
+      proofFileName: 'Transfer_8005.pdf',
+      referenceNote: 'Pending admin clearance.'
+    },
+    {
+      id: 'ORD-8006',
+      orderDate: '02 Aug 2026',
+      product: 'Dell Ultrasharp 27 Monitor',
+      quantity: 5,
+      customer: 'Design Studios',
+      customerNumber: '4433221100',
+      amount: 125000,
+      deliveryDate: '04 Aug 2026',
+      status: 'Completed',
+      adminReceived: true,
+      vendorReceived: true,
+      proofFileName: 'Settlement_8006.pdf',
+      referenceNote: 'Settled to vendor.',
+      paymentDate: '05 Aug 2026'
+    },
+    {
+      id: 'ORD-8007',
+      orderDate: '03 Aug 2026',
+      product: 'Raspberry Pi 4 Model B',
+      quantity: 20,
+      customer: 'EduTech India',
+      customerNumber: '3322110099',
+      amount: 110000,
+      deliveryDate: '05 Aug 2026',
+      status: 'Pending Admin Payout',
+      adminReceived: true,
+      vendorReceived: false,
+      proofFileName: 'Pending_8007.pdf',
+      referenceNote: 'Awaiting admin processing.'
     }
   ];
 
@@ -273,7 +319,7 @@ const Inventory = () => {
     // Filter by explicitly allowed statuses as requested
     data = data.filter(item => item.status === 'Pending Admin Payout' || item.status === 'Completed');
 
-    if (statusFilter !== 'All') {
+    if (statusFilter !== 'All Statuses') {
       data = data.filter(item => item.status.includes(statusFilter));
     }
 
