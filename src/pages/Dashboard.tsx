@@ -20,7 +20,7 @@ const Dashboard = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="page-title mb-0">Dashboard Overview</h2>
       </div>
-      
+
       {/* Vibrant Metrics Cards */}
       <div className="dashboard-cards">
         <Link to="/products" className="card-link">
@@ -78,7 +78,7 @@ const Dashboard = () => {
           <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)', fontWeight: 600 }}>Recent Orders</h3>
           <Link to="/orders" className="btn btn-primary btn-sm">View All</Link>
         </div>
-        
+
         <div className="modern-table-container" style={{ border: 'none', borderRadius: '0 0 16px 16px', boxShadow: 'none' }}>
           <table className="data-table">
             <thead>
@@ -115,7 +115,7 @@ const Dashboard = () => {
           </table>
         </div>
       </div>
-      
+
     </div>
   );
 };
