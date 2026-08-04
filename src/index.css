@@ -1,50 +1,50 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
-  /* ── Premium Dark Theme Palette ── */
-  --primary: #8b5cf6;           /* Violet */
-  --primary-hover: #7c3aed;     /* Darker Violet */
-  --primary-light: rgba(139, 92, 246, 0.15); /* Light violet */
-  --primary-mid: rgba(139, 92, 246, 0.25);   /* Mid violet */
-  --secondary: #3b82f6;         /* Blue accent */
-  --secondary-hover: #2563eb;
+  /* ── Corporate Deep Blue Palette ── */
+  --primary: #1D4ED8;           /* Deep Blue */
+  --primary-hover: #1E40AF;     /* Darker Blue */
+  --primary-light: #DBEAFE;     /* Very light blue */
+  --primary-mid: #BFDBFE;       /* Light blue */
+  --secondary: #0EA5E9;         /* Sky Blue accent */
+  --secondary-hover: #0284C7;
 
   /* ── Surfaces & Backgrounds ── */
-  --bg-color: #09090b;          /* Zinc 950 */
-  --surface: #18181b;           /* Zinc 900 */
-  --surface-2: #27272a;         /* Zinc 800 */
-  --surface-3: #3f3f46;         /* Zinc 700 */
+  --bg-color: #F0F4FF;          /* Soft blue-tinted white */
+  --surface: #FFFFFF;
+  --surface-2: #F8FAFF;         /* Slightly off-white */
+  --surface-3: #EFF4FF;
 
   /* ── Text ── */
-  --text-main: #f4f4f5;         /* Zinc 50 */
-  --text-sub: #e4e4e7;          /* Zinc 200 */
-  --text-muted: #a1a1aa;        /* Zinc 400 */
-  --text-light: #71717a;        /* Zinc 500 */
+  --text-main: #0F1B3D;         /* Deep navy */
+  --text-sub: #1E3A5F;          /* Navy */
+  --text-muted: #6B7EA0;        /* Blue-gray */
+  --text-light: #A0AEC0;
 
   /* ── Borders ── */
-  --border: #27272a;
-  --border-strong: #3f3f46;
+  --border: #D1DEFF;
+  --border-strong: #BFCFEF;
 
   /* ── Semantic Colors ── */
-  --success: #10b981;
-  --success-bg: rgba(16, 185, 129, 0.15);
-  --warning: #f59e0b;
-  --warning-bg: rgba(245, 158, 11, 0.15);
-  --danger: #ef4444;
-  --danger-bg: rgba(239, 68, 68, 0.15);
-  --info: #0ea5e9;
-  --info-bg: rgba(14, 165, 233, 0.15);
+  --success: #059669;
+  --success-bg: #D1FAE5;
+  --warning: #D97706;
+  --warning-bg: #FEF3C7;
+  --danger: #DC2626;
+  --danger-bg: #FEE2E2;
+  --info: #0EA5E9;
+  --info-bg: #E0F2FE;
 
   /* ── Typography ── */
-  --font-main: 'Inter', system-ui, sans-serif;
+  --font-main: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
 
-  /* ── Shadows (glows) ── */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.7), 0 2px 4px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 12px 32px rgba(139, 92, 246, 0.12), 0 4px 8px rgba(0, 0, 0, 0.5);
-  --shadow-primary: 0 8px 24px rgba(139, 92, 246, 0.35);
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.3);
+  /* ── Shadows (blue-tinted) ── */
+  --shadow-xs: 0 1px 2px rgba(29, 78, 216, 0.04);
+  --shadow-sm: 0 1px 4px rgba(29, 78, 216, 0.06), 0 1px 2px rgba(29, 78, 216, 0.04);
+  --shadow-md: 0 4px 12px rgba(29, 78, 216, 0.08), 0 2px 4px rgba(29, 78, 216, 0.05);
+  --shadow-lg: 0 12px 32px rgba(29, 78, 216, 0.12), 0 4px 8px rgba(29, 78, 216, 0.06);
+  --shadow-primary: 0 4px 16px rgba(29, 78, 216, 0.35);
+  --shadow-card: 0 2px 8px rgba(29, 78, 216, 0.07), 0 1px 3px rgba(29, 78, 216, 0.04);
 }
 
 /* ── Reset ── */
@@ -628,8 +628,8 @@ input:checked + .slider:before {
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(16px);
+  background-color: rgba(15, 27, 61, 0.55);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
