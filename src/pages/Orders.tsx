@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import Swal from 'sweetalert2';
-import { MdRemoveRedEye } from 'react-icons/md';
+import { MdRemoveRedEye, MdClose } from 'react-icons/md';
 
 type OrderStatus = 'New' | 'Accepted' | 'Out for Delivery' | 'Completed';
 
@@ -20,6 +20,13 @@ interface Order {
   transportName?: string;
   trackId?: string;
   trackUrl?: string;
+  items: {
+    id: string;
+    productName: string;
+    qty: number;
+    price: number;
+    subtotal: number;
+  }[];
 }
 
 const Orders = () => {
@@ -34,9 +41,12 @@ const Orders = () => {
       address: 'hyd',
       pincode: '506134',
       totalAmount: 10000.00,
-      paymentMethod: 'COD',
+      paymentMethod: 'Online',
       paymentStatus: 'Pending',
-      status: 'New'
+      status: 'New',
+      items: [
+        { id: 'i1', productName: 'CC Camera Cable', qty: 2, price: 5000.00, subtotal: 10000.00 }
+      ]
     },
     {
       id: 'ORD20260714170434832',
@@ -47,9 +57,12 @@ const Orders = () => {
       address: 'hyd',
       pincode: '506134',
       totalAmount: 5000.00,
-      paymentMethod: 'COD',
+      paymentMethod: 'Online',
       paymentStatus: 'Pending',
-      status: 'New'
+      status: 'New',
+      items: [
+        { id: 'i2', productName: 'Camera Lens', qty: 1, price: 5000.00, subtotal: 5000.00 }
+      ]
     },
     {
       id: 'ORD20260714163256924',
@@ -60,15 +73,24 @@ const Orders = () => {
       address: 'hyd',
       pincode: '506134',
       totalAmount: 12000.00,
-      paymentMethod: 'COD',
+      paymentMethod: 'Online',
       paymentStatus: 'Pending',
-      status: 'Accepted'
+      status: 'Accepted',
+      items: [
+        { id: 'i3', productName: 'Biometric Device', qty: 1, price: 10000.00, subtotal: 10000.00 },
+        { id: 'i4', productName: 'Mounting Bracket', qty: 2, price: 1000.00, subtotal: 2000.00 }
+      ]
     }
   ]);
 
   const [activeTab, setActiveTab] = useState<OrderStatus>('New');
   const [searchQuery, setSearchQuery] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('All');
+  const [showInvoiceModal, setShowInvoiceModal] = useState<Order | null>(null);
+  const [invoiceWarranties, setInvoiceWarranties] = useState<Record<string, string>>({});
+  const [invoiceModelNumbers, setInvoiceModelNumbers] = useState<Record<string, string>>({});
+  const [invoiceHsnCodes, setInvoiceHsnCodes] = useState<Record<string, string>>({});
+  const [invoiceSerialNumbers, setInvoiceSerialNumbers] = useState<Record<string, string>>({});
   const tabs: OrderStatus[] = ['New', 'Accepted', 'Out for Delivery', 'Completed'];
 
   const filteredOrders = orders.filter(order => {
@@ -371,6 +393,47 @@ const Orders = () => {
     });
   };
 
+  const handleGenerateInvoice = (order: Order) => {
+    setShowInvoiceModal(order);
+    setInvoiceWarranties({});
+    setInvoiceModelNumbers({});
+    setInvoiceHsnCodes({});
+    setInvoiceSerialNumbers({});
+  };
+
+  const submitInvoice = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showInvoiceModal) return;
+    
+    // Validate each item
+    for (const item of showInvoiceModal.items) {
+      if (!invoiceModelNumbers[item.id]?.trim()) {
+        Swal.fire('Error', `Please enter Model Number for ${item.productName}`, 'error');
+        return;
+      }
+      if (!invoiceHsnCodes[item.id]?.trim()) {
+        Swal.fire('Error', `Please enter HSN Code for ${item.productName}`, 'error');
+        return;
+      }
+      const serialsText = invoiceSerialNumbers[item.id] || '';
+      const serials = serialsText.split(',').map(s => s.trim()).filter(s => s);
+      if (serials.length !== item.qty) {
+        Swal.fire('Error', `Please enter exactly ${item.qty} serial number(s) for ${item.productName}. You have entered ${serials.length}.`, 'error');
+        return;
+      }
+    }
+    
+    Swal.fire({
+      title: 'Invoice Generated!',
+      html: `Invoice for Order <b>${showInvoiceModal.id}</b> generated successfully.<br/>It has been sent to the Admin Panel.`,
+      icon: 'success'
+    });
+    
+    // Move order to Accepted after generating invoice
+    setOrders(orders.map(o => o.id === showInvoiceModal.id ? { ...o, status: 'Accepted' } : o));
+    setShowInvoiceModal(null);
+  };
+
   return (
     <div className="page-container relative-container">
       {/* Decorative background blobs */}
@@ -501,7 +564,7 @@ const Orders = () => {
                       <div className="action-buttons" style={{ justifyContent: 'center' }}>
                         {activeTab === 'New' && (
                           <>
-                            <button onClick={() => handleAction(order.id, 'Accept')} className="btn btn-success btn-sm">Accept</button>
+                            <button onClick={() => handleGenerateInvoice(order)} className="btn btn-success btn-sm">Generate Invoice</button>
                             <button onClick={() => handleAction(order.id, 'Reject')} className="btn btn-danger btn-sm">Reject</button>
                           </>
                         )}
@@ -523,6 +586,107 @@ const Orders = () => {
           </table>
         </div>
       </div>
+      
+      {/* Generate Invoice Modal */}
+      {showInvoiceModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white', width: '90%', maxWidth: '700px', borderRadius: '12px', padding: '24px',
+            maxHeight: '90vh', overflowY: 'auto', position: 'relative'
+          }}>
+            <button
+              onClick={() => setShowInvoiceModal(null)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px' }}
+            >
+              <MdClose />
+            </button>
+            <h2 style={{ marginTop: 0, marginBottom: '20px', color: '#1e293b' }}>Generate Invoice for Order: {showInvoiceModal.id}</h2>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px', background: '#f8fafc', padding: '16px', borderRadius: '8px' }}>
+              <div><strong>Customer Name:</strong> {showInvoiceModal.user}</div>
+              <div><strong>Mobile:</strong> {showInvoiceModal.mobile}</div>
+              <div><strong>Email:</strong> {showInvoiceModal.email}</div>
+              <div><strong>Address:</strong> {showInvoiceModal.address}</div>
+            </div>
+
+            <form onSubmit={submitInvoice}>
+              <h4 style={{ marginBottom: '12px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>Items & Details</h4>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px', minWidth: '800px' }}>
+                  <thead>
+                    <tr style={{ background: '#f1f5f9' }}>
+                      <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #cbd5e1', width: '20%' }}>Product</th>
+                      <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #cbd5e1', width: '5%' }}>Qty</th>
+                      <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #cbd5e1', width: '15%' }}>Model No *</th>
+                      <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #cbd5e1', width: '15%' }}>HSN Code *</th>
+                      <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #cbd5e1', width: '25%' }}>Serial Numbers * (comma separated)</th>
+                      <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #cbd5e1', width: '20%' }}>Warranty Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {showInvoiceModal.items.map(item => (
+                      <tr key={item.id}>
+                        <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>{item.productName}</td>
+                        <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>{item.qty}</td>
+                        <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Model No"
+                            value={invoiceModelNumbers[item.id] || ''}
+                            onChange={(e) => setInvoiceModelNumbers({ ...invoiceModelNumbers, [item.id]: e.target.value })}
+                            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                          />
+                        </td>
+                        <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>
+                          <input
+                            type="text"
+                            required
+                            placeholder="HSN Code"
+                            value={invoiceHsnCodes[item.id] || ''}
+                            onChange={(e) => setInvoiceHsnCodes({ ...invoiceHsnCodes, [item.id]: e.target.value })}
+                            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                          />
+                        </td>
+                        <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>
+                          <input
+                            type="text"
+                            required
+                            placeholder={`Enter ${item.qty} serial(s)`}
+                            value={invoiceSerialNumbers[item.id] || ''}
+                            onChange={(e) => setInvoiceSerialNumbers({
+                              ...invoiceSerialNumbers,
+                              [item.id]: e.target.value
+                            })}
+                            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                          />
+                        </td>
+                        <td style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>
+                          <input
+                            type="text"
+                            placeholder="e.g. 1 Year"
+                            value={invoiceWarranties[item.id] || ''}
+                            onChange={(e) => setInvoiceWarranties({ ...invoiceWarranties, [item.id]: e.target.value })}
+                            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button type="button" onClick={() => setShowInvoiceModal(null)} className="btn btn-secondary">Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Invoice & Accept</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

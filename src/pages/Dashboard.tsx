@@ -6,9 +6,9 @@ import './Dashboard.css';
 const Dashboard = () => {
   // Dummy data for recent orders matching Orders.tsx structure
   const recentOrders = [
-    { id: 'ORD20260715140901778', date: '15 Jul 2026, 08:39 AM', user: 'admin', amount: 10000.00, status: 'New', paymentMethod: 'COD', paymentStatus: 'Pending' },
-    { id: 'ORD20260714170434832', date: '14 Jul 2026, 11:34 AM', user: 'admin', amount: 5000.00, status: 'New', paymentMethod: 'COD', paymentStatus: 'Pending' },
-    { id: 'ORD20260714163256924', date: '14 Jul 2026, 11:02 AM', user: 'admin', amount: 12000.00, status: 'Accepted', paymentMethod: 'COD', paymentStatus: 'Pending' }
+    { id: 'ORD20260715140901778', date: '15 Jul 2026, 08:39 AM', user: 'admin', amount: 10000.00, status: 'New', paymentMethod: 'Online', paymentStatus: 'Pending' },
+    { id: 'ORD20260714170434832', date: '14 Jul 2026, 11:34 AM', user: 'admin', amount: 5000.00, status: 'New', paymentMethod: 'Online', paymentStatus: 'Pending' },
+    { id: 'ORD20260714163256924', date: '14 Jul 2026, 11:02 AM', user: 'admin', amount: 12000.00, status: 'Accepted', paymentMethod: 'Online', paymentStatus: 'Pending' }
   ];
 
   return (
