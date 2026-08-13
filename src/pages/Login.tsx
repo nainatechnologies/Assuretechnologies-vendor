@@ -1,15 +1,46 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
+import API from '../services/api';
+import { loginUser } from '../services/auth';
 import './Login.css';
 import { MdEmail, MdLock } from 'react-icons/md';
 
 const Login = () => {
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login and redirect
-    navigate('/dashboard');
+    setLoading(true);
+
+    API.post('/auth/vendor/login', { email, password })
+      .then((res) => {
+        if (res.data.success) {
+          loginUser(res.data.data.user);
+          Swal.fire({
+            title: 'Success!',
+            text: 'Logged in successfully!',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          }).then(() => {
+            navigate('/dashboard');
+          });
+        }
+      })
+      .catch((err) => {
+        console.error('Login Error:', err);
+        Swal.fire({
+          title: 'Login Failed',
+          text: err.response?.data?.message || 'Invalid credentials',
+          icon: 'error',
+          confirmButtonColor: '#EF4444'
+        });
+      })
+      .finally(() => setLoading(false));
   };
 
   return (
@@ -27,7 +58,7 @@ const Login = () => {
             <label htmlFor="email">Email</label>
             <div className="input-icon-wrapper">
               <MdEmail className="input-icon" />
-              <input type="email" id="email" className="form-control with-icon" placeholder="vendor@example.com" required />
+              <input type="email" id="email" className="form-control with-icon" placeholder="vendor@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
           </div>
           <div className="form-group">
@@ -37,10 +68,12 @@ const Login = () => {
             </div>
             <div className="input-icon-wrapper">
               <MdLock className="input-icon" />
-              <input type="password" id="password" className="form-control with-icon" placeholder="••••••••" required />
+              <input type="password" id="password" className="form-control with-icon" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
           </div>
-          <button type="submit" className="btn btn-primary w-100 mt-4">Login</button>
+          <button type="submit" className="btn btn-primary w-100 mt-4" disabled={loading}>
+            {loading ? 'Logging in...' : 'Login'}
+          </button>
         </form>
       </div>
     </div>

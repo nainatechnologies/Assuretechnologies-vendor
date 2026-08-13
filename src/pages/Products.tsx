@@ -16,7 +16,10 @@ const Products = () => {
     title: '',
     price: '',
     category: '',
-    offer: ''
+    offer: '',
+    stock: '',
+    description: '',
+    admin_commission: ''
   });
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,7 +71,10 @@ const Products = () => {
       title: product.title,
       price: product.price.toString(),
       category: product.category,
-      offer: product.offer.toString()
+      offer: product.offer.toString(),
+      stock: product.stock.toString(),
+      description: product.description || '',
+      admin_commission: product.admin_commission ? product.admin_commission.toString() : ''
     });
   };
 
@@ -97,6 +103,9 @@ const Products = () => {
         price: parseFloat(editFormData.price) || 0,
         category: editFormData.category,
         offer: parseFloat(editFormData.offer) || 0,
+        stock: parseInt(editFormData.stock, 10) || 0,
+        description: editFormData.description,
+        admin_commission: parseFloat(editFormData.admin_commission) || 0,
         ...(previewImage && { image: previewImage })
       });
       setEditingProduct(null);
@@ -226,7 +235,7 @@ const Products = () => {
               <th>Title</th>
               <th>Category</th>
               <th>Price</th>
-              <th>Offer</th>
+              <th>Discount (%)</th>
               <th>Stock</th>
               <th>Status</th>
               <th>Actions</th>
@@ -250,7 +259,7 @@ const Products = () => {
                   <td className="font-weight-500">{product.title}</td>
                   <td>{product.category}</td>
                   <td>₹{product.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                  <td>₹{product.offer.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                  <td>{product.offer}%</td>
                   <td>
                     <div className="d-flex align-items-center" style={{ gap: '4px' }}>
                       <input 
@@ -336,7 +345,7 @@ const Products = () => {
       {/* Edit Modal */}
       {editingProduct && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '700px', borderRadius: '16px', overflow: 'hidden', padding: 0 }}>
+          <div className="modal-content" style={{ maxWidth: '700px', width: '90%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', borderRadius: '16px', overflow: 'hidden', padding: 0 }}>
             
             {/* Modal Header */}
             <div style={{ background: 'linear-gradient(135deg, var(--primary), var(--info))', padding: '24px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -346,7 +355,9 @@ const Products = () => {
                 </div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>Edit Product</h3>
-                  <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>ID: {editingProduct.id}</span>
+                  <span style={{ fontSize: '0.85rem', opacity: 0.8 }} title={editingProduct.id}>
+                    ID: {editingProduct.display_id || editingProduct.id}
+                  </span>
                 </div>
               </div>
               <button 
@@ -358,7 +369,7 @@ const Products = () => {
             </div>
 
             {/* Modal Body */}
-            <div style={{ padding: '32px', background: '#fff' }}>
+            <div style={{ padding: '32px', background: '#fff', overflowY: 'auto', flex: 1 }}>
               <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
                 
                 {/* Left Column - Images */}
@@ -392,6 +403,36 @@ const Products = () => {
                 {/* Right Column - Details */}
                 <div style={{ flex: 1, minWidth: '300px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   
+                  {(() => {
+                    const editVendorPrice = parseFloat(editFormData.price) || 0;
+                    const editAdminCommission = parseFloat(editFormData.admin_commission) || 0;
+                    const editDiscountPct = parseFloat(editFormData.offer) || 0;
+                    
+                    const editOriginalPrice = editVendorPrice + editAdminCommission;
+                    const editVendorDiscountedPrice = editVendorPrice * (1 - (editDiscountPct / 100));
+                    const editFinalSellingPrice = editVendorDiscountedPrice + editAdminCommission;
+                    const editVendorPayout = editVendorDiscountedPrice;
+
+                    return (
+                      <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', marginBottom: '8px' }}>
+                        <div style={{ fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Pricing Breakdown</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ color: '#64748b' }}>Original Price (Frontend):</span>
+                          <span style={{ fontWeight: '500', textDecoration: 'line-through' }}>₹{editOriginalPrice.toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ color: '#64748b' }}>Final Selling Price:</span>
+                          <span style={{ fontWeight: 'bold', color: '#10b981' }}>₹{editFinalSellingPrice.toFixed(2)}</span>
+                        </div>
+                        <div style={{ borderTop: '1px solid #e2e8f0', margin: '8px 0' }}></div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: '#475569', fontWeight: '500' }}>Your Payout:</span>
+                          <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>₹{editVendorPayout.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  
                   <div>
                     <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>Product Title</label>
                     <input 
@@ -418,13 +459,15 @@ const Products = () => {
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>Status</label>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>Discount (%)</label>
                       <input 
-                        type="text" 
+                        type="number" 
+                        step="0.01" 
                         className="form-control" 
-                        value={editingProduct.status}
-                        disabled
-                        style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', background: '#e2e8f0', color: '#64748b' }}
+                        name="offer"
+                        value={editFormData.offer}
+                        onChange={handleEditChange}
+                        style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', background: '#f8fafc' }}
                       />
                     </div>
                   </div>
@@ -442,17 +485,46 @@ const Products = () => {
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>Offer Price (₹)</label>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>Stock</label>
                       <input 
                         type="number" 
-                        step="0.01" 
                         className="form-control" 
-                        name="offer"
-                        value={editFormData.offer}
+                        name="stock"
+                        value={editFormData.stock}
                         onChange={handleEditChange}
                         style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', background: '#f8fafc' }}
                       />
                     </div>
+                  </div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>Admin Comm. (₹)</label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        className="form-control" 
+                        name="admin_commission"
+                        value={editFormData.admin_commission}
+                        onChange={handleEditChange}
+                        style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', background: '#f8fafc' }}
+                      />
+                    </div>
+                    <div>
+                      {/* Empty column to keep grid layout intact */}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>Description</label>
+                    <textarea 
+                      className="form-control" 
+                      name="description"
+                      rows={3}
+                      value={editFormData.description}
+                      onChange={handleEditChange}
+                      style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', background: '#f8fafc', resize: 'vertical' }}
+                    ></textarea>
                   </div>
 
                 </div>

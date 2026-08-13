@@ -12,6 +12,7 @@ const AddProduct = () => {
     title: '',
     description: '',
     price: '',
+    discount: '',
     adminCommissionPct: '10',
     stock: '',
     image: 'https://placehold.co/60x40/png',
@@ -36,8 +37,13 @@ const AddProduct = () => {
 
   const vendorPrice = parseFloat(formData.price) || 0;
   const commissionPct = parseFloat(formData.adminCommissionPct) || 0;
+  const discountPct = parseFloat(formData.discount) || 0;
+  
   const adminCommission = vendorPrice * (commissionPct / 100);
-  const totalPrice = vendorPrice + adminCommission;
+  const originalPrice = vendorPrice + adminCommission;
+  const vendorDiscountedPrice = vendorPrice * (1 - (discountPct / 100));
+  const finalSellingPrice = vendorDiscountedPrice + adminCommission;
+  const vendorPayout = vendorDiscountedPrice;
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,9 +52,10 @@ const AddProduct = () => {
     addProduct({
       title: formData.title || 'Untitled Product',
       category: formData.category || 'Uncategorized',
-      price: totalPrice,
+      price: vendorPrice,
+      admin_commission: adminCommission,
       stock: parseInt(formData.stock, 10) || 0,
-      offer: 0,
+      offer: parseFloat(formData.discount) || 0,
       status: 'Active',
       image: formData.image,
     });
@@ -133,6 +140,21 @@ const AddProduct = () => {
                 />
               </div>
               <div className="form-group col-half">
+                <label>Discount (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  className="form-control"
+                  name="discount"
+                  value={formData.discount}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group col-half">
                 <label>Admin Commission (%)</label>
                 <input
                   type="number"
@@ -144,19 +166,27 @@ const AddProduct = () => {
                   required
                 />
               </div>
+              <div className="form-group col-half">
+                <label>Pricing Breakdown</label>
+                <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Original Price (Frontend):</span>
+                    <span style={{ fontWeight: '500', textDecoration: 'line-through' }}>₹{originalPrice.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Final Selling Price:</span>
+                    <span style={{ fontWeight: 'bold', color: '#10b981' }}>₹{finalSellingPrice.toFixed(2)}</span>
+                  </div>
+                  <div style={{ borderTop: '1px solid #e2e8f0', margin: '8px 0' }}></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#475569', fontWeight: '500' }}>Your Payout:</span>
+                    <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>₹{vendorPayout.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="form-row">
-              <div className="form-group col-half">
-                <label>Total Price</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={totalPrice > 0 ? `₹${totalPrice.toFixed(2)}` : ''}
-                  readOnly
-                  style={{ backgroundColor: 'var(--surface-2)', color: 'var(--primary)', fontWeight: 'bold' }}
-                />
-              </div>
               <div className="form-group col-half">
                 <label>Initial Stock</label>
                 <input
