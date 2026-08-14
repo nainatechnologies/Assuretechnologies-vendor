@@ -1,11 +1,12 @@
-import React, { createContext, useState, useContext, useEffect, type ReactNode } from 'react';
+import React, { createContext, useState, useContext, type ReactNode } from 'react';
 import API from '../services/api';
+import { BASE_URL } from '../services/api';
 import Swal from 'sweetalert2';
 
 export interface Product {
   id: string;
   display_id?: string;
-  image: string;
+  image: string | File;
   title: string;
   category: string;
   price: number;
@@ -18,6 +19,8 @@ export interface Product {
 
 interface ProductContextType {
   products: Product[];
+  fetchProducts: (params?: any) => Promise<any>;
+  isLoading: boolean;
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (id: string, updatedFields: Partial<Product>) => void;
   toggleProductStatus: (id: string) => void;
@@ -36,14 +39,17 @@ export const useProductContext = () => {
 
 export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (params: any = {}) => {
+    setIsLoading(true);
     try {
-      const response = await API.get('/vendor/products');
-      const mappedProducts = response.data.map((p: any) => ({
+      const response = await API.get('/vendor/products', { params });
+      const productArray = response.data.data || response.data;
+      const mappedProducts = productArray.map((p: any) => ({
         id: p.id,
         display_id: p.display_id,
-        image: p.banner || 'https://placehold.co/60x40/png',
+        image: p.banner ? (p.banner.startsWith('/uploads/') ? `${BASE_URL}${p.banner}` : p.banner) : 'https://placehold.co/60x40/png',
         title: p.name,
         category: p.category,
         price: p.base_price,
@@ -54,29 +60,35 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
         status: p.status === 'Active' || p.status === 'In Stock' ? 'Active' : 'Inactive',
       }));
       setProducts(mappedProducts);
+      return response.data.pagination;
     } catch (error) {
       console.error('Failed to fetch products:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
   const addProduct = async (newProduct: Omit<Product, 'id'>) => {
     try {
-      const payload = {
-        name: newProduct.title,
-        category: newProduct.category,
-        base_price: newProduct.price,
-        discount: newProduct.offer,
-        admin_commission: newProduct.admin_commission || 0,
-        stock: newProduct.stock,
-        description: newProduct.description || '',
-        banner: newProduct.image,
-        status: newProduct.status,
-      };
-      const res = await API.post('/vendor/products', payload);
+      const formData = new FormData();
+      formData.append('name', newProduct.title);
+      formData.append('category', newProduct.category);
+      formData.append('base_price', newProduct.price.toString());
+      if (newProduct.admin_commission !== undefined) formData.append('admin_commission', newProduct.admin_commission.toString());
+      formData.append('stock', newProduct.stock.toString());
+      formData.append('discount', newProduct.offer.toString());
+      if (newProduct.description) formData.append('description', newProduct.description);
+      formData.append('status', newProduct.status);
+      
+      if (newProduct.image instanceof File) {
+        formData.append('banner', newProduct.image);
+      } else if (typeof newProduct.image === 'string') {
+        formData.append('banner', newProduct.image);
+      }
+
+      await API.post('/vendor/products', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       fetchProducts();
       Swal.fire('Success', 'Product added successfully', 'success');
     } catch (error) {
@@ -87,18 +99,25 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const updateProduct = async (id: string, updatedFields: Partial<Product>) => {
     try {
-      const payload: any = {};
-      if (updatedFields.title) payload.name = updatedFields.title;
-      if (updatedFields.category) payload.category = updatedFields.category;
-      if (updatedFields.price !== undefined) payload.base_price = updatedFields.price;
-      if (updatedFields.offer !== undefined) payload.discount = updatedFields.offer;
-      if (updatedFields.stock !== undefined) payload.stock = updatedFields.stock;
-      if (updatedFields.admin_commission !== undefined) payload.admin_commission = updatedFields.admin_commission;
-      if (updatedFields.description !== undefined) payload.description = updatedFields.description;
-      if (updatedFields.image) payload.banner = updatedFields.image;
-      if (updatedFields.status) payload.status = updatedFields.status;
+      const formData = new FormData();
+      if (updatedFields.title) formData.append('name', updatedFields.title);
+      if (updatedFields.category) formData.append('category', updatedFields.category);
+      if (updatedFields.price !== undefined) formData.append('base_price', updatedFields.price.toString());
+      if (updatedFields.offer !== undefined) formData.append('discount', updatedFields.offer.toString());
+      if (updatedFields.stock !== undefined) formData.append('stock', updatedFields.stock.toString());
+      if (updatedFields.admin_commission !== undefined) formData.append('admin_commission', updatedFields.admin_commission.toString());
+      if (updatedFields.description !== undefined) formData.append('description', updatedFields.description);
+      if (updatedFields.status) formData.append('status', updatedFields.status);
 
-      await API.put(`/vendor/products/${id}`, payload);
+      if (updatedFields.image instanceof File) {
+        formData.append('banner', updatedFields.image);
+      } else if (typeof updatedFields.image === 'string') {
+        formData.append('banner', updatedFields.image);
+      }
+
+      await API.put(`/vendor/products/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       fetchProducts();
     } catch (error) {
       console.error('Failed to update product:', error);
@@ -109,10 +128,15 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
   const toggleProductStatus = async (id: string) => {
     const product = products.find(p => p.id === id);
     if (!product) return;
-    const newStatus = product.status === 'Active' ? 'Inactive' : 'Active';
+    const newStatusUI = product.status === 'Active' ? 'Inactive' : 'Active';
+    const newStatusDB = newStatusUI === 'Active' ? 'In Stock' : 'Out of Stock';
     try {
-      await API.put(`/vendor/products/${id}`, { status: newStatus });
-      fetchProducts();
+      await API.put(`/vendor/products/${id}`, { status: newStatusDB });
+      setProducts(currentProducts => 
+        currentProducts.map(p => 
+          p.id === id ? { ...p, status: newStatusUI } : p
+        )
+      );
     } catch (error) {
       console.error('Failed to toggle status:', error);
     }
@@ -129,7 +153,7 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   return (
-    <ProductContext.Provider value={{ products, addProduct, updateProduct, toggleProductStatus, deleteProduct }}>
+    <ProductContext.Provider value={{ products, fetchProducts, isLoading, addProduct, updateProduct, toggleProductStatus, deleteProduct }}>
       {children}
     </ProductContext.Provider>
   );

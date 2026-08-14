@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { MdClose } from 'react-icons/md';
 import Swal from 'sweetalert2';
 import { useProductContext } from '../context/ProductContext';
+import Loading from '../components/Loading';
 import './Products.css';
 import type { Product } from '../context/ProductContext';
 
 const Products = () => {
-  const { products, updateProduct, toggleProductStatus, deleteProduct } = useProductContext();
+  const { products, fetchProducts, isLoading, updateProduct, toggleProductStatus, deleteProduct } = useProductContext();
   
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [stockUpdates, setStockUpdates] = useState<Record<string, number>>({});
@@ -25,44 +26,29 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [stockFilter, setStockFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
-  const location = useLocation();
+  // const location = useLocation();
 
+  // Server-side pagination and filtering
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get('filter') === 'low-stock') {
-      setStockFilter('Low Stock');
-    }
-  }, [location.search]);
+    const timer = setTimeout(() => {
+      fetchProducts({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: searchTerm,
+        stockStatus: stockFilter
+      }).then((pagination: any) => {
+        if (pagination) {
+          setTotalPages(pagination.totalPages);
+        }
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [currentPage, searchTerm, stockFilter]);
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          product.category.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    let matchesStock = true;
-    if (stockFilter === 'In Stock') {
-      matchesStock = product.stock > 0;
-    } else if (stockFilter === 'Out of Stock') {
-      matchesStock = product.stock === 0;
-    } else if (stockFilter === 'Low Stock') {
-      matchesStock = product.stock < 10;
-    }
-    
-    return matchesSearch && matchesStock;
-  });
-
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [totalPages, currentPage]);
-
-  const paginatedProducts = filteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // Use the products from context directly
+  const paginatedProducts = products;
 
   const handleEditClick = (product: Product) => {
     setEditingProduct(product);
@@ -242,7 +228,13 @@ const Products = () => {
             </tr>
           </thead>
           <tbody>
-            {paginatedProducts.length === 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan={8} className="text-center py-5">
+                  <Loading />
+                </td>
+              </tr>
+            ) : paginatedProducts.length === 0 ? (
               <tr>
                 <td colSpan={8} className="text-center py-5 text-muted">
                   No products found matching your criteria.
