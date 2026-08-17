@@ -13,6 +13,7 @@ const Products = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [stockUpdates, setStockUpdates] = useState<Record<string, number>>({});
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [editFormData, setEditFormData] = useState({
     title: '',
     price: '',
@@ -67,6 +68,7 @@ const Products = () => {
   const handleCloseModal = () => {
     setEditingProduct(null);
     setPreviewImage(null);
+    setImageFile(null);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,6 +76,7 @@ const Products = () => {
       const file = e.target.files[0];
       const imageUrl = URL.createObjectURL(file);
       setPreviewImage(imageUrl);
+      setImageFile(file);
     }
   };
 
@@ -92,10 +95,11 @@ const Products = () => {
         stock: parseInt(editFormData.stock, 10) || 0,
         description: editFormData.description,
         admin_commission: parseFloat(editFormData.admin_commission) || 0,
-        ...(previewImage && { image: previewImage })
+        ...(imageFile && { image: imageFile })
       });
       setEditingProduct(null);
-      setPreviewImage(null);
+    setPreviewImage(null);
+    setImageFile(null);
       
       Swal.fire({
         icon: 'success',

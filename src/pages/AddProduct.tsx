@@ -16,7 +16,8 @@ const AddProduct = () => {
     adminCommissionPct: '10',
     stock: '',
     image: 'https://placehold.co/60x40/png',
-    fileName: 'No file chosen'
+    fileName: 'No file chosen',
+    imageFile: null as File | null
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -29,7 +30,7 @@ const AddProduct = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, image: reader.result as string, fileName: file.name }));
+        setFormData(prev => ({ ...prev, image: reader.result as string, fileName: file.name, imageFile: file }));
       };
       reader.readAsDataURL(file);
     }
@@ -57,7 +58,7 @@ const AddProduct = () => {
       stock: parseInt(formData.stock, 10) || 0,
       offer: parseFloat(formData.discount) || 0,
       status: 'Active',
-      image: formData.image,
+      image: formData.imageFile || formData.image,
     });
 
     // Navigate to products page
