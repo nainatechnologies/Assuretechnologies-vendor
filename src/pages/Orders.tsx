@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import API from '../services/api';
 
 import Swal from 'sweetalert2';
 import { MdRemoveRedEye, MdClose } from 'react-icons/md';
@@ -31,57 +32,43 @@ interface Order {
 
 const Orders = () => {
   // Dummy data matching the admin panel
-  const [orders, setOrders] = useState<Order[]>([
-    {
-      id: 'ORD20260715140901778',
-      date: '15 Jul 2026, 08:39 AM',
-      user: 'admin',
-      mobile: '9988776655',
-      email: 'shyam.matham@nainatechnologies.in',
-      address: 'hyd',
-      pincode: '506134',
-      totalAmount: 10000.00,
-      paymentMethod: 'Online',
-      paymentStatus: 'Pending',
-      status: 'New',
-      items: [
-        { id: 'i1', productName: 'CC Camera Cable', qty: 2, price: 5000.00, subtotal: 10000.00 }
-      ]
-    },
-    {
-      id: 'ORD20260714170434832',
-      date: '14 Jul 2026, 11:34 AM',
-      user: 'admin',
-      mobile: '9988776655',
-      email: 'shyam.matham@nainatechnologies.in',
-      address: 'hyd',
-      pincode: '506134',
-      totalAmount: 5000.00,
-      paymentMethod: 'Online',
-      paymentStatus: 'Pending',
-      status: 'New',
-      items: [
-        { id: 'i2', productName: 'Camera Lens', qty: 1, price: 5000.00, subtotal: 5000.00 }
-      ]
-    },
-    {
-      id: 'ORD20260714163256924',
-      date: '14 Jul 2026, 11:02 AM',
-      user: 'admin',
-      mobile: '9988776655',
-      email: 'shyam.matham@nainatechnologies.in',
-      address: 'hyd',
-      pincode: '506134',
-      totalAmount: 12000.00,
-      paymentMethod: 'Online',
-      paymentStatus: 'Pending',
-      status: 'Accepted',
-      items: [
-        { id: 'i3', productName: 'Biometric Device', qty: 1, price: 10000.00, subtotal: 10000.00 },
-        { id: 'i4', productName: 'Mounting Bracket', qty: 2, price: 1000.00, subtotal: 2000.00 }
-      ]
+  
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  const fetchOrders = async () => {
+    try {
+      const response = await API.get('/vendor/orders');
+      const fetchedOrders = response.data.map((o: any) => ({
+        id: o.order_number || o.id,
+        date: new Date(o.createdAt).toLocaleString(),
+        user: o.customer?.full_name || o.customer_name || 'N/A',
+        mobile: o.customer?.mobile || o.customer_contact || 'N/A',
+        email: o.customer?.email || 'N/A',
+        address: o.customer_address || 'N/A',
+        pincode: o.customer?.pincode || 'N/A',
+        totalAmount: o.items.reduce((sum: number, item: any) => sum + (parseFloat(item.subtotal) || 0), 0),
+        paymentMethod: 'Online',
+        paymentStatus: o.payment_status === 'PAID' ? 'Paid' : 'Pending',
+        status: o.status === 'NEW' ? 'New' : o.status === 'ACCEPTED' ? 'Accepted' : o.status === 'OUT_FOR_DELIVERY' ? 'Out for Delivery' : o.status === 'COMPLETED' ? 'Completed' : 'Rejected',
+        items: o.items.map((i: any) => ({
+          id: i.id,
+          productName: i.product?.name || 'Unknown',
+          qty: parseInt(i.qty, 10) || 0,
+          price: parseFloat(i.price) || 0,
+          subtotal: parseFloat(i.subtotal) || 0
+        }))
+      }));
+      setOrders(fetchedOrders);
+    } catch (error) {
+      console.error('Failed to fetch orders', error);
+      Swal.fire('Error', 'Failed to fetch orders', 'error');
     }
-  ]);
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
 
   const [activeTab, setActiveTab] = useState<OrderStatus>('New');
   const [searchQuery, setSearchQuery] = useState('');
@@ -401,11 +388,12 @@ const Orders = () => {
     setInvoiceSerialNumbers({});
   };
 
-  const submitInvoice = (e: React.FormEvent) => {
+  const submitInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!showInvoiceModal) return;
     
     // Validate each item
+    const payloadItems = [];
     for (const item of showInvoiceModal.items) {
       if (!invoiceModelNumbers[item.id]?.trim()) {
         Swal.fire('Error', `Please enter Model Number for ${item.productName}`, 'error');
@@ -421,17 +409,31 @@ const Orders = () => {
         Swal.fire('Error', `Please enter exactly ${item.qty} serial number(s) for ${item.productName}. You have entered ${serials.length}.`, 'error');
         return;
       }
+      payloadItems.push({
+        id: item.id,
+        productName: item.productName,
+        modelNumber: invoiceModelNumbers[item.id],
+        hsnCode: invoiceHsnCodes[item.id],
+        serialNumbers: serials,
+        warranty: invoiceWarranties[item.id] || ''
+      });
     }
     
-    Swal.fire({
-      title: 'Invoice Generated!',
-      html: `Invoice for Order <b>${showInvoiceModal.id}</b> generated successfully.<br/>It has been sent to the Admin Panel.`,
-      icon: 'success'
-    });
-    
-    // Move order to Accepted after generating invoice
-    setOrders(orders.map(o => o.id === showInvoiceModal.id ? { ...o, status: 'Accepted' } : o));
-    setShowInvoiceModal(null);
+    try {
+      await API.post(`/invoices/vendor/orders/${showInvoiceModal.id}`, { items: payloadItems });
+      Swal.fire({
+        title: 'Invoice Generated!',
+        html: `Invoice for Order <b>${showInvoiceModal.id}</b> generated successfully.<br/>It has been sent to the Admin Panel.`,
+        icon: 'success'
+      });
+      
+      // Refresh list
+      fetchOrders();
+      setShowInvoiceModal(null);
+    } catch (error: any) {
+      console.error('Failed to generate invoice', error);
+      Swal.fire('Error', error.response?.data?.message || 'Failed to generate invoice', 'error');
+    }
   };
 
   return (
@@ -692,3 +694,4 @@ const Orders = () => {
 };
 
 export default Orders;
+
