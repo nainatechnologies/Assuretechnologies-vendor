@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import API from '../services/api';
@@ -68,7 +68,7 @@ const Login = () => {
             </div>
             <div className="input-icon-wrapper">
               <MdLock className="input-icon" />
-              <input type="password" id="password" className="form-control with-icon" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <input type="password" id="password" className="form-control with-icon" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
           </div>
           <button type="submit" className="btn btn-primary w-100 mt-4" disabled={loading}>
@@ -81,3 +81,4 @@ const Login = () => {
 };
 
 export default Login;
+
