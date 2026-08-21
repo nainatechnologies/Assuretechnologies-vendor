@@ -4,7 +4,7 @@ import API from '../services/api';
 import Swal from 'sweetalert2';
 import { MdRemoveRedEye, MdClose } from 'react-icons/md';
 
-type OrderStatus = 'New' | 'Accepted' | 'Out for Delivery' | 'Completed';
+type OrderStatus = 'New' | 'Accepted' | 'Out for Delivery' | 'Completed' | 'Cancelled';
 
 interface Order {
   id: string;
@@ -38,26 +38,32 @@ const Orders = () => {
   const fetchOrders = async () => {
     try {
       const response = await API.get('/vendor/orders');
-      const fetchedOrders = response.data.map((o: any) => ({
-        id: o.order_number || o.id,
-        date: new Date(o.createdAt).toLocaleString(),
-        user: o.customer?.full_name || o.customer_name || 'N/A',
-        mobile: o.customer?.mobile || o.customer_contact || 'N/A',
-        email: o.customer?.email || 'N/A',
-        address: o.customer_address || 'N/A',
-        pincode: o.customer?.pincode || 'N/A',
-        totalAmount: o.items.reduce((sum: number, item: any) => sum + (parseFloat(item.subtotal) || 0), 0),
-        paymentMethod: 'Online',
-        paymentStatus: o.payment_status === 'PAID' ? 'Paid' : 'Pending',
-        status: o.status === 'NEW' ? 'New' : o.status === 'ACCEPTED' ? 'Accepted' : o.status === 'OUT_FOR_DELIVERY' ? 'Out for Delivery' : o.status === 'COMPLETED' ? 'Completed' : 'Rejected',
-        items: o.items.map((i: any) => ({
-          id: i.id,
-          productName: i.product?.name || 'Unknown',
-          qty: parseInt(i.qty, 10) || 0,
-          price: parseFloat(i.price) || 0,
-          subtotal: parseFloat(i.subtotal) || 0
-        }))
-      }));
+      const fetchedOrders = response.data.map((o: any) => {
+        const itemWithTracking = o.items.find((i: any) => i.tracking_id);
+        return {
+          id: o.order_number || o.id,
+          date: new Date(o.createdAt).toLocaleString(),
+          user: o.customer?.full_name || o.customer_name || 'N/A',
+          mobile: o.customer?.mobile || o.customer_contact || 'N/A',
+          email: o.customer?.email || 'N/A',
+          address: o.customer_address || 'N/A',
+          pincode: o.customer?.pincode || 'N/A',
+          totalAmount: o.items.reduce((sum: number, item: any) => sum + (parseFloat(item.subtotal) || 0), 0),
+          paymentMethod: 'Online',
+          paymentStatus: o.payment_status === 'PAID' ? 'Paid' : 'Pending',
+          status: o.status === 'NEW' ? 'New' : o.status === 'ACCEPTED' ? 'Accepted' : o.status === 'OUT_FOR_DELIVERY' ? 'Out for Delivery' : o.status === 'COMPLETED' ? 'Completed' : o.status === 'CANCELLED' ? 'Cancelled' : 'Rejected',
+          transportName: itemWithTracking?.transport_name || o.transport_name,
+          trackId: itemWithTracking?.tracking_id || o.tracking_id,
+          trackUrl: itemWithTracking?.tracking_url || o.tracking_url,
+          items: o.items.map((i: any) => ({
+            id: i.id,
+            productName: i.product?.name || 'Unknown',
+            qty: parseInt(i.qty, 10) || 0,
+            price: parseFloat(i.price) || 0,
+            subtotal: parseFloat(i.subtotal) || 0
+          }))
+        };
+      });
       setOrders(fetchedOrders);
     } catch (error) {
       console.error('Failed to fetch orders', error);
@@ -78,7 +84,7 @@ const Orders = () => {
   const [invoiceModelNumbers, setInvoiceModelNumbers] = useState<Record<string, string>>({});
   const [invoiceHsnCodes, setInvoiceHsnCodes] = useState<Record<string, string>>({});
   const [invoiceSerialNumbers, setInvoiceSerialNumbers] = useState<Record<string, string>>({});
-  const tabs: OrderStatus[] = ['New', 'Accepted', 'Out for Delivery', 'Completed'];
+  const tabs: OrderStatus[] = ['New', 'Accepted', 'Out for Delivery', 'Completed', 'Cancelled'];
 
   const filteredOrders = orders.filter(order => {
     if (order.status !== activeTab) return false;
@@ -320,18 +326,24 @@ const Orders = () => {
         }
         return { transportName, trackId, trackUrl };
       }
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
         const { transportName, trackId, trackUrl } = result.value;
-        setOrders(orders.map(o => o.id === orderId ? { ...o, transportName, trackId, trackUrl } : o));
-        Swal.fire({
-          icon: 'success',
-          title: 'Tracking Saved!',
-          html: `<span style="font-size:0.9rem;color:#1E3A5F;">Track ID <strong>${trackId}</strong> via <strong>${transportName}</strong> has been saved successfully.</span>`,
-          confirmButtonColor: '#1D4ED8',
-          confirmButtonText: 'Done',
-          width: '400px'
-        });
+        try {
+          await API.put(`/vendor/orders/${orderId}/tracking`, { transportName, trackingId: trackId, trackUrl });
+          setOrders(orders.map(o => o.id === orderId ? { ...o, transportName, trackId, trackUrl } : o));
+          Swal.fire({
+            icon: 'success',
+            title: 'Tracking Saved!',
+            html: `<span style="font-size:0.9rem;color:#1E3A5F;">Track ID <strong>${trackId}</strong> via <strong>${transportName}</strong> has been saved successfully.</span>`,
+            confirmButtonColor: '#1D4ED8',
+            confirmButtonText: 'Done',
+            width: '400px'
+          });
+        } catch (error: any) {
+          console.error('Failed to save tracking', error);
+          Swal.fire('Error', error.response?.data?.message || 'Failed to save tracking', 'error');
+        }
       }
     });
   };
@@ -531,7 +543,7 @@ const Orders = () => {
                     <td>
                       <div className="d-flex" style={{ flexDirection: 'column' }}>
                         <span>{order.address}</span>
-                        <span className="font-weight-500">{order.pincode}</span>
+                        {order.pincode && order.pincode !== 'N/A' && <span className="font-weight-500">{order.pincode}</span>}
                       </div>
                     </td>
                     <td className="font-weight-500">₹{order.totalAmount.toFixed(2)}</td>
