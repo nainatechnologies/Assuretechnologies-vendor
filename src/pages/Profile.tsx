@@ -1,42 +1,132 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Profile.css';
 import Swal from 'sweetalert2';
-import { MdEdit, MdBusiness, MdPhone, MdLocationOn, MdPerson } from 'react-icons/md';
+import { MdEdit } from 'react-icons/md';
+import { getProfile, updateProfile } from '../services/vendorApi';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const profileSchema = z.object({
+  name: z.string().min(3, 'Contact Person must be at least 3 characters'),
+  businessName: z.string().min(3, 'Business name must be at least 3 characters'),
+  mobile: z.string().optional(),
+  email: z.string().optional(),
+  gstNumber: z.string().length(15, 'GST number must be exactly 15 characters'),
+  address: z.string().min(10, 'Address must be at least 10 characters'),
+  pincode: z.string().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits'),
+  businessDescription: z.string().optional()
+});
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
 
 const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: 'Rajesh Kumar',
-    businessName: 'ElectroVision Electronics',
-    mobile: '+91 9988776655',
-    gstNumber: '36AADCE1234F1Z9',
-    address: '45 Electronics Market, SP Road',
-    pincode: '500003',
-    businessDescription: 'Wholesale supplier of networking equipment, IP cameras, and smart home solutions.'
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [originalName, setOriginalName] = useState('');
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors }
+  } = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      name: '',
+      businessName: '',
+      mobile: '',
+      email: '',
+      gstNumber: '',
+      address: '',
+      pincode: '',
+      businessDescription: ''
+    }
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await getProfile();
+        setOriginalName(data.business_name || 'Business Name');
+        reset({
+          name: data.full_name || '',
+          businessName: data.business_name || '',
+          email: data.email || '',
+          mobile: data.mobile || '',
+          gstNumber: data.gst_number || '',
+          address: data.address || '',
+          pincode: data.pincode || '',
+          businessDescription: data.business_description || ''
+        });
+      } catch (error) {
+        console.error('Failed to fetch profile', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [reset]);
+
+  const onSubmit = async (data: ProfileFormValues) => {
+    setSaving(true);
+    try {
+      await updateProfile({
+        full_name: data.name,
+        business_name: data.businessName,
+        gst_number: data.gstNumber,
+        address: data.address,
+        pincode: data.pincode,
+        business_description: data.businessDescription
+      });
+      setOriginalName(data.businessName);
+      Swal.fire({
+        icon: 'success',
+        title: 'Profile Saved!',
+        text: 'Your business profile has been updated successfully.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to save profile', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Update Failed',
+        text: 'There was an issue saving your profile. Please try again.',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    Swal.fire({
-      icon: 'success',
-      title: 'Profile Saved!',
-      text: 'Your business profile has been updated successfully.',
-      timer: 1500,
-      showConfirmButton: false
-    });
+  const cancelEdit = async () => {
     setIsEditing(false);
+    // Refetch to clear un-saved changes
+    try {
+      const data = await getProfile();
+      reset({
+        name: data.full_name || '',
+        businessName: data.business_name || '',
+        email: data.email || '',
+        mobile: data.mobile || '',
+        gstNumber: data.gst_number || '',
+        address: data.address || '',
+        pincode: data.pincode || '',
+        businessDescription: data.business_description || ''
+      });
+    } catch (error) {
+      console.error('Failed to refetch profile on cancel', error);
+    }
   };
+
+  if (loading) {
+    return <div className="page-container"><p>Loading profile...</p></div>;
+  }
 
   return (
-    <div className="page-container relative-container">
-      <div className="bg-blob blob-1"></div>
-      <div className="bg-blob blob-2"></div>
-      
+    <div className="page-container">
       <div style={{ maxWidth: '800px', margin: '0 auto' }}>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h2 className="page-title mb-0">Business Profile</h2>
@@ -51,105 +141,115 @@ const Profile = () => {
           )}
         </div>
 
-        <div className="panel" style={{ border: 'none', padding: '0', overflow: 'hidden', borderRadius: '16px' }}>
-          {/* Cover and Avatar Section */}
-          <div style={{ height: '140px', background: 'linear-gradient(135deg, var(--primary), #3b82f6)' }}></div>
-          <div style={{ padding: '0 32px 32px 32px', position: 'relative' }}>
-            <div style={{ 
-              width: '110px', height: '110px', borderRadius: '50%', background: '#fff', 
-              padding: '6px', marginTop: '-55px', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' 
-            }}>
-              <div style={{ 
-                width: '100%', height: '100%', borderRadius: '50%', background: 'var(--primary-light)', 
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontSize: '2.5rem' 
-              }}>
-                <MdBusiness />
-              </div>
-            </div>
+        <div className="card shadow-sm border-0" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+          <div className="card-body p-4">
+            <h4 className="mb-4">{originalName}</h4>
 
-            {!isEditing ? (
-              /* View Mode */
-              <div>
-                <h3 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>{formData.businessName}</h3>
-                <p style={{ color: '#475569', fontSize: '1rem', marginBottom: '32px', lineHeight: '1.6' }}>{formData.businessDescription}</p>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                  <div className="profile-info-box">
-                    <MdPerson className="info-icon" />
-                    <div className="info-content">
-                      <span className="info-label">Contact Name</span>
-                      <span className="info-value">{formData.name}</span>
-                    </div>
-                  </div>
-                  <div className="profile-info-box">
-                    <MdPhone className="info-icon" />
-                    <div className="info-content">
-                      <span className="info-label">Mobile Number</span>
-                      <span className="info-value">{formData.mobile}</span>
-                    </div>
-                  </div>
-                  <div className="profile-info-box">
-                    <MdBusiness className="info-icon" />
-                    <div className="info-content">
-                      <span className="info-label">GST Number</span>
-                      <span className="info-value">{formData.gstNumber || 'Not provided'}</span>
-                    </div>
-                  </div>
-                  <div className="profile-info-box">
-                    <MdLocationOn className="info-icon" />
-                    <div className="info-content">
-                      <span className="info-label">Location</span>
-                      <span className="info-value">{formData.address}, {formData.pincode}</span>
-                    </div>
-                  </div>
+            <form onSubmit={handleSubmit(onSubmit)} autoComplete="none">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "20px" }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label fw-medium mb-1">Contact Person</label>
+                  <input type="text" autoComplete="none"
+                    className={`form-control ${errors.name ? 'input-error' : ''}`}
+                    {...register('name')}
+                    readOnly={!isEditing}
+                  />
+                  {errors.name && <span className="error-text">{errors.name.message}</span>}
                 </div>
-              </div>
-            ) : (
-              /* Edit Mode */
-              <form onSubmit={handleSave}>
-                <h3 className="section-title" style={{ fontSize: '1.1rem', color: '#1e293b', fontWeight: 700, marginBottom: '20px' }}>Edit Information</h3>
                 
-                <div className="form-row mb-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                  <div className="form-group mb-0">
-                    <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Contact Name</label>
-                    <input type="text" className="form-control" name="name" value={formData.name} onChange={handleChange} required />
-                  </div>
-                  <div className="form-group mb-0">
-                    <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Business Name</label>
-                    <input type="text" className="form-control" name="businessName" value={formData.businessName} onChange={handleChange} required />
-                  </div>
-                  <div className="form-group mb-0">
-                    <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>GST Number</label>
-                    <input type="text" className="form-control" name="gstNumber" value={formData.gstNumber} onChange={handleChange} />
-                  </div>
-                  <div className="form-group mb-0">
-                    <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Mobile Number</label>
-                    <input type="tel" className="form-control" name="mobile" value={formData.mobile} onChange={handleChange} required />
-                  </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label fw-medium mb-1">Business Name</label>
+                  <input type="text" autoComplete="none"
+                    className={`form-control ${errors.businessName ? 'input-error' : ''}`}
+                    {...register('businessName')}
+                    readOnly={!isEditing}
+                  />
+                  {errors.businessName && <span className="error-text">{errors.businessName.message}</span>}
                 </div>
 
-                <div className="form-row mb-4" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
-                  <div className="form-group mb-0">
-                    <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Pincode</label>
-                    <input type="text" className="form-control" name="pincode" value={formData.pincode} onChange={handleChange} required />
-                  </div>
-                  <div className="form-group mb-0">
-                    <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Full Address</label>
-                    <input type="text" className="form-control" name="address" value={formData.address} onChange={handleChange} required />
-                  </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label fw-medium mb-1">Mobile Number</label>
+                  <input type="text" autoComplete="none"
+                    className="form-control"
+                    {...register('mobile')}
+                    readOnly
+                  />
                 </div>
 
-                <div className="form-group mb-4">
-                  <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Business Description</label>
-                  <textarea className="form-control" rows={3} name="businessDescription" value={formData.businessDescription} onChange={handleChange} style={{ resize: 'none' }}></textarea>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label fw-medium mb-1">Email Address</label>
+                  <input type="email" autoComplete="none"
+                    className="form-control"
+                    {...register('email')}
+                    readOnly
+                  />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(false)} style={{ padding: '10px 24px', borderRadius: '8px' }}>Cancel</button>
-                  <button type="submit" className="btn btn-primary" style={{ padding: '10px 32px', borderRadius: '8px' }}>Save Changes</button>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label fw-medium mb-1">GST Number</label>
+                  <input type="text" autoComplete="none"
+                    className={`form-control text-uppercase ${errors.gstNumber ? 'input-error' : ''}`}
+                    {...register('gstNumber')}
+                    readOnly={!isEditing}
+                  />
+                  {errors.gstNumber && <span className="error-text">{errors.gstNumber.message}</span>}
                 </div>
-              </form>
-            )}
+
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label fw-medium mb-1">Pincode</label>
+                  <input type="text" autoComplete="none"
+                    className={`form-control ${errors.pincode ? 'input-error' : ''}`}
+                    {...register('pincode')}
+                    readOnly={!isEditing}
+                  />
+                  {errors.pincode && <span className="error-text">{errors.pincode.message}</span>}
+                </div>
+
+                <div style={{ gridColumn: "span 2", display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label fw-medium mb-1">Business Address</label>
+                  <input type="text" autoComplete="none"
+                    className={`form-control ${errors.address ? 'input-error' : ''}`}
+                    {...register('address')}
+                    readOnly={!isEditing}
+                  />
+                  {errors.address && <span className="error-text">{errors.address.message}</span>}
+                </div>
+
+                <div style={{ gridColumn: "span 2", display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label fw-medium mb-1">Business Description</label>
+                  <textarea
+                    className={`form-control ${errors.businessDescription ? 'input-error' : ''}`}
+                    {...register('businessDescription')}
+                    readOnly={!isEditing}
+                    rows={3}
+                    style={{ resize: 'none' }}
+                  />
+                  {errors.businessDescription && <span className="error-text">{errors.businessDescription.message}</span>}
+                </div>
+              </div>
+
+              {isEditing && (
+                <div className="d-flex justify-content-end gap-3 mt-4 pt-3 border-top">
+                  <button 
+                    type="button" 
+                    className="btn btn-light" 
+                    onClick={cancelEdit}
+                    disabled={saving}
+                    style={{ padding: '8px 24px', borderRadius: '8px' }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary"
+                    disabled={saving}
+                    style={{ padding: '8px 24px', borderRadius: '8px' }}
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              )}
+            </form>
           </div>
         </div>
       </div>

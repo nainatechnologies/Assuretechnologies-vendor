@@ -249,7 +249,7 @@ const Products = () => {
                 <tr key={product.id}>
                   <td>
                     <div style={{ width: '60px', height: '40px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-                      <img src={product.image} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={typeof product.image === 'string' ? product.image : URL.createObjectURL(product.image as File)} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                   </td>
                   <td className="font-weight-500">{product.title}</td>
@@ -376,7 +376,7 @@ const Products = () => {
                     borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', position: 'relative',
                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}>
-                    <img src={previewImage || editingProduct.image} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={previewImage || (typeof editingProduct.image === 'string' ? editingProduct.image : URL.createObjectURL(editingProduct.image as File))} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.7rem', padding: '4px 8px', borderRadius: '4px' }}>{previewImage ? 'Preview' : 'Current'}</div>
                   </div>
                   

@@ -396,6 +396,7 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--surface);
   transition: all 0.25s ease;
   outline: none;
+  margin: 0 0 10px 0;
 }
 
 .form-control:focus {
@@ -712,4 +713,11 @@ input:checked + .slider:before {
   align-items: center;
   gap: 6px;
   margin-top: 24px;
+}
+
+/* Readonly states */
+input[readonly], textarea[readonly] {
+  cursor: not-allowed !important;
+  background-color: var(--surface-2) !important;
+  opacity: 0.8;
 }

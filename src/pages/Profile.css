@@ -1,47 +1,11 @@
-/* Profile specific styles */
-.profile-info-box {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  background: #f8fafc;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  transition: all 0.2s ease;
+.form-control[readonly] {
+  cursor: default !important;
+  color: #0f172a !important;
+  background-color: #f1f5f9 !important;
 }
 
-.profile-info-box:hover {
-  background: #fff;
-  border-color: #cbd5e1;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-}
+/* Zod Validation Errors */
+.input-error { border-color: #ef4444 !important; }
+.input-error:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important; }
+.error-text { color: #ef4444; font-size: 12px; margin-top: 2px; }
 
-.profile-info-box .info-icon {
-  font-size: 1.5rem;
-  color: var(--primary);
-  background: var(--primary-light, #e0e7ff);
-  padding: 8px;
-  border-radius: 8px;
-  box-sizing: content-box;
-}
-
-.profile-info-box .info-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.profile-info-box .info-label {
-  font-size: 0.75rem;
-  color: #64748b;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.profile-info-box .info-value {
-  font-size: 0.95rem;
-  color: #0f172a;
-  font-weight: 500;
-  line-height: 1.4;
-}
