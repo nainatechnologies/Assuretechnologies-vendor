@@ -4,31 +4,8 @@ import API from '../services/api';
 import Swal from 'sweetalert2';
 import { MdRemoveRedEye, MdClose } from 'react-icons/md';
 
-type OrderStatus = 'New' | 'Accepted' | 'Out for Delivery' | 'Completed' | 'Cancelled';
-
-interface Order {
-  id: string;
-  date: string;
-  user: string;
-  mobile: string;
-  email: string;
-  address: string;
-  pincode: string;
-  totalAmount: number;
-  paymentMethod: string;
-  paymentStatus: string;
-  status: OrderStatus;
-  transportName?: string;
-  trackId?: string;
-  trackUrl?: string;
-  items: {
-    id: string;
-    productName: string;
-    qty: number;
-    price: number;
-    subtotal: number;
-  }[];
-}
+import type { Order, OrderStatus } from '../utils/orderMapper';
+import { mapApiOrderToOrder } from '../utils/orderMapper';
 
 const Orders = () => {
   // Dummy data matching the admin panel
@@ -40,29 +17,12 @@ const Orders = () => {
       const response = await API.get('/vendor/orders');
       const fetchedOrders = response.data.map((o: any) => {
         const itemWithTracking = o.items.find((i: any) => i.tracking_id);
-        return {
-          id: o.order_number || o.id,
-          date: new Date(o.createdAt).toLocaleString(),
-          user: o.customer?.full_name || o.customer_name || 'N/A',
-          mobile: o.customer?.mobile || o.customer_contact || 'N/A',
-          email: o.customer?.email || 'N/A',
-          address: o.customer_address || 'N/A',
-          pincode: o.customer?.pincode || 'N/A',
-          totalAmount: o.items.reduce((sum: number, item: any) => sum + (parseFloat(item.subtotal) || 0), 0),
-          paymentMethod: 'Online',
-          paymentStatus: o.payment_status === 'PAID' ? 'Paid' : 'Pending',
-          status: o.status === 'NEW' ? 'New' : o.status === 'ACCEPTED' ? 'Accepted' : o.status === 'OUT_FOR_DELIVERY' ? 'Out for Delivery' : o.status === 'COMPLETED' ? 'Completed' : o.status === 'CANCELLED' ? 'Cancelled' : 'Rejected',
-          transportName: itemWithTracking?.transport_name || o.transport_name,
-          trackId: itemWithTracking?.tracking_id || o.tracking_id,
-          trackUrl: itemWithTracking?.tracking_url || o.tracking_url,
-          items: o.items.map((i: any) => ({
-            id: i.id,
-            productName: i.product?.name || 'Unknown',
-            qty: parseInt(i.qty, 10) || 0,
-            price: parseFloat(i.price) || 0,
-            subtotal: parseFloat(i.subtotal) || 0
-          }))
-        };
+        const totalAmount = o.items.reduce((sum: number, item: any) => sum + (parseFloat(item.subtotal) || 0), 0);
+        return mapApiOrderToOrder(o, o.items, totalAmount, {
+          transportName: itemWithTracking?.transport_name,
+          trackId: itemWithTracking?.tracking_id,
+          trackUrl: itemWithTracking?.tracking_url
+        });
       });
       setOrders(fetchedOrders);
     } catch (error) {
@@ -624,6 +584,8 @@ const Orders = () => {
               <div><strong>Mobile:</strong> {showInvoiceModal.mobile}</div>
               <div><strong>Email:</strong> {showInvoiceModal.email}</div>
               <div><strong>Address:</strong> {showInvoiceModal.address}</div>
+              {showInvoiceModal.companyName && <div><strong>Company:</strong> {showInvoiceModal.companyName}</div>}
+              {showInvoiceModal.gstNumber && <div><strong>GST Number:</strong> {showInvoiceModal.gstNumber}</div>}
             </div>
 
             <form onSubmit={submitInvoice}>

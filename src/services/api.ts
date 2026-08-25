@@ -3,8 +3,9 @@ import axios from "axios";
 export const BASE_URL = "http://localhost:5000";
 
 const API = axios.create({
-  baseURL: `${BASE_URL}/api`,
+  baseURL: 'http://localhost:5000/api',
   withCredentials: true,
+  headers: { 'X-Client-Type': 'vendor' }
 });
 
 API.interceptors.request.use((config) => {
@@ -29,3 +30,8 @@ API.interceptors.response.use(
 );
 
 export default API;
+
+
+
+
+

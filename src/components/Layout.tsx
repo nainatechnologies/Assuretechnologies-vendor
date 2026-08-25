@@ -1,4 +1,4 @@
-import { NavLink, Link, Outlet } from 'react-router-dom';
+import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import './Layout.css';
 import {
   MdDashboard,
@@ -9,8 +9,31 @@ import {
   MdLogout
 } from 'react-icons/md';
 import { FiBox } from 'react-icons/fi';
+import API from '../services/api';
+import { logoutUser } from '../services/auth';
+import Swal from 'sweetalert2';
 
 const Layout = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      await API.post('/auth/vendor/logout');
+    } catch (err) {
+      console.error('Logout API error:', err);
+    }
+    logoutUser();
+    Swal.fire({
+      title: 'Logged Out',
+      text: 'You have been logged out successfully.',
+      icon: 'success',
+      timer: 1500,
+      showConfirmButton: false
+    });
+    navigate('/login');
+  };
+
   return (
     <div className="layout-container">
       <nav className="navbar">
@@ -50,9 +73,9 @@ const Layout = () => {
           <NavLink to="/profile" className="nav-link">
             <MdPerson className="nav-icon" /> Profile
           </NavLink>
-          <NavLink to="/login" className="nav-link text-warning">
+          <a href="#" onClick={handleLogout} className="nav-link text-warning">
             <MdLogout className="nav-icon" /> Logout
-          </NavLink>
+          </a>
         </div>
       </nav>
 
