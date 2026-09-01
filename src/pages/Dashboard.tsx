@@ -1,15 +1,74 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiBox } from 'react-icons/fi';
 import { MdHourglassEmpty, MdCheckCircleOutline, MdErrorOutline, MdRemoveRedEye } from 'react-icons/md';
+import API from '../services/api';
+import type { Order } from '../utils/orderMapper';
+import { mapApiOrderToOrder } from '../utils/orderMapper';
+import Loading from '../components/Loading';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  // Dummy data for recent orders matching Orders.tsx structure
-  const recentOrders = [
-    { id: 'ORD20260715140901778', date: '15 Jul 2026, 08:39 AM', user: 'admin', amount: 10000.00, status: 'New', paymentMethod: 'Online', paymentStatus: 'Pending' },
-    { id: 'ORD20260714170434832', date: '14 Jul 2026, 11:34 AM', user: 'admin', amount: 5000.00, status: 'New', paymentMethod: 'Online', paymentStatus: 'Pending' },
-    { id: 'ORD20260714163256924', date: '14 Jul 2026, 11:02 AM', user: 'admin', amount: 12000.00, status: 'Accepted', paymentMethod: 'Online', paymentStatus: 'Pending' }
-  ];
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    pendingOrders: 0,
+    deliveredOrders: 0,
+    lowStockAlerts: 0
+  });
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const [statsRes, ordersRes] = await Promise.all([
+          API.get('/vendor/dashboard/stats'),
+          API.get('/vendor/dashboard/recent-orders')
+        ]);
+        
+        const statsData = statsRes.data?.data || statsRes.data;
+        if (statsData) {
+          setStats({
+            totalProducts: Number(statsData.totalProducts) || 0,
+            pendingOrders: Number(statsData.pendingOrders) || 0,
+            deliveredOrders: Number(statsData.deliveredOrders) || 0,
+            lowStockAlerts: Number(statsData.lowStockAlerts) || 0
+          });
+        }
+        
+        const rawOrders = Array.isArray(ordersRes.data?.data) 
+          ? ordersRes.data.data 
+          : (Array.isArray(ordersRes.data) ? ordersRes.data : []);
+
+        const fetchedOrders = rawOrders.map((o: any) => {
+          const items = Array.isArray(o.items) ? o.items : [];
+          const itemWithTracking = items.find((i: any) => i.tracking_id);
+          const totalAmount = items.reduce((sum: number, item: any) => sum + (parseFloat(item.subtotal) || 0), 0);
+          return mapApiOrderToOrder(o, items, totalAmount, {
+            transportName: itemWithTracking?.transport_name,
+            trackId: itemWithTracking?.tracking_id,
+            trackUrl: itemWithTracking?.tracking_url
+          });
+        });
+        
+        setRecentOrders(fetchedOrders);
+      } catch (err) {
+        console.error('Failed to fetch dashboard data', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="page-container relative-container d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
+        <Loading />
+      </div>
+    );
+  }
 
   return (
     <div className="page-container relative-container">
@@ -29,7 +88,7 @@ const Dashboard = () => {
               <FiBox />
             </div>
             <div className="vibrant-details">
-              <h3>24</h3>
+              <h3>{stats.totalProducts}</h3>
               <p>Total Products</p>
             </div>
           </div>
@@ -41,8 +100,8 @@ const Dashboard = () => {
               <MdHourglassEmpty />
             </div>
             <div className="vibrant-details">
-              <h3>12</h3>
-              <p>Pending Orders</p>
+              <h3>{stats.pendingOrders}</h3>
+              <p>New Orders</p>
             </div>
           </div>
         </Link>
@@ -53,7 +112,7 @@ const Dashboard = () => {
               <MdCheckCircleOutline />
             </div>
             <div className="vibrant-details">
-              <h3>156</h3>
+              <h3>{stats.deliveredOrders}</h3>
               <p>Delivered</p>
             </div>
           </div>
@@ -65,7 +124,7 @@ const Dashboard = () => {
               <MdErrorOutline />
             </div>
             <div className="vibrant-details">
-              <h3>3</h3>
+              <h3>{stats.lowStockAlerts}</h3>
               <p>Low Stock Alerts</p>
             </div>
           </div>
@@ -92,25 +151,33 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {recentOrders.map((order, index) => (
-                <tr key={index}>
-                  <td className="font-weight-500">{order.id}</td>
-                  <td>{order.date}</td>
-                  <td>{order.user}</td>
-                  <td className="font-weight-500">₹{order.amount.toFixed(2)}</td>
-                  <td>
-                    <div className="d-flex" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
-                      <span style={{ fontSize: '0.8125rem' }}>{order.paymentMethod}</span>
-                      <span className="badge badge-success">{order.paymentStatus}</span>
-                    </div>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <Link to="/orders" className="btn btn-secondary btn-sm" style={{ padding: '6px 10px' }} title="View Order">
-                      <MdRemoveRedEye size={18} style={{ color: 'var(--primary)' }} />
-                    </Link>
+              {recentOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center text-muted" style={{ padding: '24px' }}>
+                    No recent orders found.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                recentOrders.map((order, index) => (
+                  <tr key={index}>
+                    <td className="font-weight-500">{order.id}</td>
+                    <td>{order.date}</td>
+                    <td>{order.user}</td>
+                    <td className="font-weight-500">₹{order.totalAmount.toFixed(2)}</td>
+                    <td>
+                      <div className="d-flex" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
+                        <span style={{ fontSize: '0.8125rem' }}>{order.paymentMethod}</span>
+                        <span className="badge badge-success">{order.paymentStatus}</span>
+                      </div>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <Link to="/orders" className="btn btn-secondary btn-sm" style={{ padding: '6px 10px' }} title="View Order">
+                        <MdRemoveRedEye size={18} style={{ color: 'var(--primary)' }} />
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

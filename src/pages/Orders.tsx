@@ -1,3 +1,5 @@
+import Loading from '../components/Loading';
+import Pagination from '../components/Pagination';
 import { useState, useEffect } from 'react';
 import API from '../services/api';
 
@@ -6,6 +8,7 @@ import { MdRemoveRedEye, MdClose } from 'react-icons/md';
 
 import type { Order, OrderStatus } from '../utils/orderMapper';
 import { mapApiOrderToOrder } from '../utils/orderMapper';
+import OrderModal from '../components/OrderModal';
 
 const Orders = () => {
   // Dummy data matching the admin panel
@@ -14,6 +17,7 @@ const Orders = () => {
 
   const fetchOrders = async () => {
     try {
+      setIsLoading(true);
       const response = await API.get('/vendor/orders');
       const fetchedOrders = response.data.map((o: any) => {
         const itemWithTracking = o.items.find((i: any) => i.tracking_id);
@@ -28,6 +32,8 @@ const Orders = () => {
     } catch (error) {
       console.error('Failed to fetch orders', error);
       Swal.fire('Error', 'Failed to fetch orders', 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -40,10 +46,13 @@ const Orders = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('All');
   const [showInvoiceModal, setShowInvoiceModal] = useState<Order | null>(null);
+  const [viewOrderModal, setViewOrderModal] = useState<Order | null>(null);
   const [invoiceWarranties, setInvoiceWarranties] = useState<Record<string, string>>({});
   const [invoiceModelNumbers, setInvoiceModelNumbers] = useState<Record<string, string>>({});
   const [invoiceHsnCodes, setInvoiceHsnCodes] = useState<Record<string, string>>({});
   const [invoiceSerialNumbers, setInvoiceSerialNumbers] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const tabs: OrderStatus[] = ['New', 'Accepted', 'Out for Delivery', 'Completed', 'Cancelled'];
 
   const filteredOrders = orders.filter(order => {
@@ -70,28 +79,14 @@ const Orders = () => {
     );
   });
 
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage) || 1;
+  const paginatedOrders = filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   const showTrackColumn = activeTab === 'Accepted' || activeTab === 'Out for Delivery' || activeTab === 'Completed';
 
   const handleView = (order: Order) => {
-    Swal.fire({
-      title: `Order Details - ${order.id}`,
-      html: `
-        <div style="text-align: left; font-size: 0.95rem; line-height: 1.6; color: var(--text-main);">
-          <p><strong>Order Date:</strong> ${order.date}</p>
-          <p><strong>Customer:</strong> ${order.user} (${order.mobile})</p>
-          <p><strong>Email:</strong> ${order.email}</p>
-          <p><strong>Delivery Address:</strong> ${order.address}, Pincode: ${order.pincode}</p>
-          ${order.trackId ? `<p><strong>Transport:</strong> ${order.transportName}</p><p><strong>Track ID:</strong> ${order.trackId}</p>` : ''}
-          <hr style="border: 0; border-top: 1px solid var(--border); margin: 16px 0;" />
-          <p><strong>Payment Method:</strong> ${order.paymentMethod}</p>
-          <p><strong>Payment Status:</strong> <span class="badge badge-success">${order.paymentStatus}</span></p>
-          <p><strong>Total Amount:</strong> <span style="font-size: 1.25rem; font-weight: 700; color: var(--text-main);">₹${order.totalAmount.toFixed(2)}</span></p>
-        </div>
-      `,
-      confirmButtonText: 'Close',
-      confirmButtonColor: 'var(--primary)',
-      width: '500px'
-    });
+    setViewOrderModal(order);
   };
 
   const handleTrack = (orderId: string) => {
@@ -465,102 +460,111 @@ const Orders = () => {
           ))}
         </div>
 
-        <div className="modern-table-container" style={{ border: 'none', borderRadius: '0 0 16px 16px', boxShadow: 'none' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>Ordered Date</th>
-                <th>User</th>
-                <th>Contact</th>
-                <th>Address</th>
-                <th>Amount</th>
-                <th>Payment</th>
-                {showTrackColumn && <th style={{ textAlign: 'center' }}>Track ID</th>}
-                <th style={{ textAlign: 'center' }}>View</th>
-                <th style={{ textAlign: 'center' }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOrders.length === 0 ? (
+        {isLoading ? (
+          <Loading />
+        ) : (
+          <div className="modern-table-container" style={{ border: 'none', borderRadius: '0 0 16px 16px', boxShadow: 'none' }}>
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <td colSpan={showTrackColumn ? 10 : 9} className="text-center text-muted" style={{ padding: '48px' }}>
-                    No {activeTab} orders found.
-                  </td>
+                  <th>Order ID</th>
+                  <th>Ordered Date</th>
+                  <th>User</th>
+                  <th>Contact</th>
+                  <th>Address</th>
+                  <th>Products</th>
+                  <th>Total Amount</th>
+                  <th>Payment</th>
+                  {showTrackColumn && <th style={{ textAlign: 'center' }}>Tracking Details</th>}
+                  <th style={{ textAlign: 'center' }}>View</th>
+                  <th style={{ textAlign: 'center' }}>Action</th>
                 </tr>
-              ) : (
-                filteredOrders.map((order) => (
-                  <tr key={order.id}>
-                    <td className="font-weight-500">{order.id}</td>
-                    <td>{order.date}</td>
-                    <td>{order.user}</td>
-                    <td>
-                      <div className="d-flex" style={{ flexDirection: 'column' }}>
-                        <span className="font-weight-500">{order.mobile}</span>
-                        <span className="text-muted" style={{ fontSize: '0.8125rem' }}>{order.email}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="d-flex" style={{ flexDirection: 'column' }}>
-                        <span>{order.address}</span>
-                        {order.pincode && order.pincode !== 'N/A' && <span className="font-weight-500">{order.pincode}</span>}
-                      </div>
-                    </td>
-                    <td className="font-weight-500">₹{order.totalAmount.toFixed(2)}</td>
-                    <td>
-                      <div className="d-flex" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
-                        <span style={{ fontSize: '0.8125rem' }}>{order.paymentMethod}</span>
-                        <span className="badge badge-success">{order.paymentStatus}</span>
-                      </div>
-                    </td>
-
-                    {showTrackColumn && (
-                      <td style={{ textAlign: 'center' }}>
-                        {order.trackId ? (
-                          <div className="d-flex" style={{ flexDirection: 'column', gap: '4px', textAlign: 'left' }}>
-                            <span className="font-weight-500">{order.trackId}</span>
-                            <span className="text-muted" style={{ fontSize: '0.8125rem' }}>{order.transportName}</span>
-                          </div>
-                        ) : (
-                          <button onClick={() => handleTrack(order.id)} className="btn btn-secondary btn-sm" style={{ color: 'var(--primary)' }}>
-                            Track
-                          </button>
-                        )}
-                      </td>
-                    )}
-
-                    <td style={{ textAlign: 'center' }}>
-                      <button onClick={() => handleView(order)} className="btn btn-secondary btn-sm" style={{ padding: '6px 10px' }} title="View Order">
-                        <MdRemoveRedEye size={18} style={{ color: 'var(--primary)' }} />
-                      </button>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <div className="action-buttons" style={{ justifyContent: 'center' }}>
-                        {activeTab === 'New' && (
-                          <>
-                            <button onClick={() => handleGenerateInvoice(order)} className="btn btn-success btn-sm">Generate Invoice</button>
-                            <button onClick={() => handleAction(order.id, 'Reject')} className="btn btn-danger btn-sm">Reject</button>
-                          </>
-                        )}
-                        {activeTab === 'Accepted' && (
-                          <button onClick={() => handleAction(order.id, 'Out for Delivery')} className="btn btn-warning btn-sm" style={{ color: '#fff' }}>Out for Delivery</button>
-                        )}
-                        {activeTab === 'Out for Delivery' && (
-                          <button onClick={() => handleAction(order.id, 'Complete')} className="btn btn-success btn-sm">Delivered</button>
-                        )}
-                        {activeTab === 'Completed' && (
-                          <span className="badge badge-success">Delivered</span>
-                        )}
-                      </div>
+              </thead>
+              <tbody>
+                {paginatedOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={showTrackColumn ? 11 : 10} style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+                      No orders found in {activeTab}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  paginatedOrders.map(order => (
+                    <tr key={order.id}>
+                      <td className="font-weight-600" style={{ color: 'var(--primary)' }}>{order.id}</td>
+                      <td>{order.date}</td>
+                      <td>{order.user}</td>
+                      <td>{order.mobile}</td>
+                      <td style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={order.address}>
+                        {order.address}
+                      </td>
+                      <td>
+                        <span className="badge badge-secondary">{order.items.length} items</span>
+                      </td>
+                      <td className="font-weight-600">₹{order.totalAmount.toFixed(2)}</td>
+                      <td>
+                        <span className={`badge badge-${order.paymentStatus === 'PAID' ? 'success' : 'warning'}`}>
+                          {order.paymentStatus}
+                        </span>
+                      </td>
+
+                      {showTrackColumn && (
+                        <td style={{ textAlign: 'center' }}>
+                          {order.trackId ? (
+                            <div className="d-flex" style={{ flexDirection: 'column', gap: '4px', textAlign: 'left' }}>
+                              <span className="font-weight-500">{order.trackId}</span>
+                              <span className="text-muted" style={{ fontSize: '0.8125rem' }}>{order.transportName}</span>
+                            </div>
+                          ) : (
+                            <button onClick={() => handleTrack(order.id)} className="btn btn-secondary btn-sm" style={{ color: 'var(--primary)' }}>
+                              Track
+                            </button>
+                          )}
+                        </td>
+                      )}
+
+                      <td style={{ textAlign: 'center' }}>
+                        <button onClick={() => handleView(order)} className="btn btn-secondary btn-sm" style={{ padding: '6px 10px' }} title="View Order">
+                          <MdRemoveRedEye size={18} style={{ color: 'var(--primary)' }} />
+                        </button>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div className="action-buttons" style={{ justifyContent: 'center' }}>
+                          {activeTab === 'New' && (
+                            <>
+                              <button onClick={() => handleGenerateInvoice(order)} className="btn btn-success btn-sm">Generate Invoice</button>
+                              <button onClick={() => handleAction(order.id, 'Reject')} className="btn btn-danger btn-sm">Reject</button>
+                            </>
+                          )}
+                          {activeTab === 'Accepted' && (
+                            <button onClick={() => handleAction(order.id, 'Out for Delivery')} className="btn btn-warning btn-sm" style={{ color: '#fff' }}>Out for Delivery</button>
+                          )}
+                          {activeTab === 'Out for Delivery' && (
+                            <button onClick={() => handleAction(order.id, 'Complete')} className="btn btn-success btn-sm">Delivered</button>
+                          )}
+                          {activeTab === 'Completed' && (
+                            <span className="badge badge-success">Delivered</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-      
+
+      {!isLoading && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      )}
+
+      {viewOrderModal && <OrderModal order={viewOrderModal} onClose={() => setViewOrderModal(null)} />}
+
       {/* Generate Invoice Modal */}
       {showInvoiceModal && (
         <div style={{

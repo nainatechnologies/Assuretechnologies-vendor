@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import Loading from '../components/Loading';
+import { useState, useEffect } from 'react';
 import './Profile.css';
 import Swal from 'sweetalert2';
 import { MdEdit } from 'react-icons/md';
@@ -122,7 +123,11 @@ const Profile = () => {
   };
 
   if (loading) {
-    return <div className="page-container"><p>Loading profile...</p></div>;
+    return (
+      <div className="page-container relative-container d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
+        <Loading />
+      </div>
+    );
   }
 
   return (

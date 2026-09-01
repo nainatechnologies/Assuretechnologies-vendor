@@ -1,3 +1,4 @@
+import Pagination from '../components/Pagination';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MdClose } from 'react-icons/md';
@@ -308,35 +309,11 @@ const Products = () => {
         </table>
       </div>
 
-      {totalPages > 1 && (
-        <div className="pagination-container d-flex justify-content-center mt-4">
-          <button 
-            className="btn btn-secondary btn-sm mx-1" 
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(prev => prev - 1)}
-          >
-            Previous
-          </button>
-          
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-            <button 
-              key={page}
-              className={`btn btn-sm mx-1 ${currentPage === page ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setCurrentPage(page)}
-            >
-              {page}
-            </button>
-          ))}
-          
-          <button 
-            className="btn btn-secondary btn-sm mx-1" 
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(prev => prev + 1)}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
 
       {/* Edit Modal */}
       {editingProduct && (
