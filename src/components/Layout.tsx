@@ -9,6 +9,7 @@ import {
   MdLogout
 } from 'react-icons/md';
 import { FiBox } from 'react-icons/fi';
+import NotificationsDropdown from './NotificationsDropdown';
 import API from '../services/api';
 import { logoutUser } from '../services/auth';
 import Swal from 'sweetalert2';
@@ -70,6 +71,7 @@ const Layout = () => {
         </ul>
 
         <div className="navbar-right">
+          <NotificationsDropdown />
           <NavLink to="/profile" className="nav-link">
             <MdPerson className="nav-icon" /> Profile
           </NavLink>

@@ -5,7 +5,6 @@ import './App.css';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import AddProduct from './pages/AddProduct';
 import Products from './pages/Products';
@@ -25,7 +24,6 @@ function App() {
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
 
             {/* Protected routes wrapped in PrivateRoute and Layout */}
             <Route element={<PrivateRoute />}>
