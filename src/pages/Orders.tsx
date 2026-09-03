@@ -11,18 +11,53 @@ import { mapApiOrderToOrder } from '../utils/orderMapper';
 import OrderModal from '../components/OrderModal';
 
 const Orders = () => {
-  // Dummy data matching the admin panel
-  
   const [orders, setOrders] = useState<Order[]>([]);
+  const [activeTab, setActiveTab] = useState<OrderStatus>('New');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState('All');
+  const [showInvoiceModal, setShowInvoiceModal] = useState<Order | null>(null);
+  const [viewOrderModal, setViewOrderModal] = useState<Order | null>(null);
+  const [invoiceWarranties, setInvoiceWarranties] = useState<Record<string, string>>({});
+  const [invoiceModelNumbers, setInvoiceModelNumbers] = useState<Record<string, string>>({});
+  const [invoiceHsnCodes, setInvoiceHsnCodes] = useState<Record<string, string>>({});
+  const [invoiceSerialNumbers, setInvoiceSerialNumbers] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalOrdersCount, setTotalOrdersCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const tabs: OrderStatus[] = ['New', 'Accepted', 'Out for Delivery', 'Completed', 'Cancelled'];
 
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
-      const response = await API.get('/vendor/orders');
-      const fetchedOrders = response.data.map((o: any) => {
-        const itemWithTracking = o.items.find((i: any) => i.tracking_id);
-        const totalAmount = o.items.reduce((sum: number, item: any) => sum + (parseFloat(item.subtotal) || 0), 0);
-        return mapApiOrderToOrder(o, o.items, totalAmount, {
+      const dbStatus = activeTab === 'New' ? 'NEW'
+        : activeTab === 'Accepted' ? 'ACCEPTED'
+        : activeTab === 'Out for Delivery' ? 'OUT_FOR_DELIVERY'
+        : activeTab === 'Completed' ? 'COMPLETED'
+        : activeTab === 'Cancelled' ? 'CANCELLED'
+        : undefined;
+
+      const params: any = {
+        page: currentPage,
+        limit: 10,
+        status: dbStatus,
+        search: searchQuery || undefined
+      };
+
+      const response = await API.get('/vendor/orders', { params });
+      const rawList = response.data?.orders || (Array.isArray(response.data) ? response.data : []);
+      if (response.data?.pagination) {
+        setTotalPages(response.data.pagination.totalPages || 1);
+        setTotalOrdersCount(response.data.pagination.total || rawList.length);
+      } else {
+        setTotalPages(1);
+        setTotalOrdersCount(rawList.length);
+      }
+
+      const fetchedOrders = rawList.map((o: any) => {
+        const itemWithTracking = o.items?.find((i: any) => i.tracking_id);
+        const totalAmount = o.items?.reduce((sum: number, item: any) => sum + (parseFloat(item.subtotal) || 0), 0) || 0;
+        return mapApiOrderToOrder(o, o.items || [], totalAmount, {
           transportName: itemWithTracking?.transport_name,
           trackId: itemWithTracking?.tracking_id,
           trackUrl: itemWithTracking?.tracking_url
@@ -39,21 +74,7 @@ const Orders = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
-
-
-  const [activeTab, setActiveTab] = useState<OrderStatus>('New');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [paymentFilter, setPaymentFilter] = useState('All');
-  const [showInvoiceModal, setShowInvoiceModal] = useState<Order | null>(null);
-  const [viewOrderModal, setViewOrderModal] = useState<Order | null>(null);
-  const [invoiceWarranties, setInvoiceWarranties] = useState<Record<string, string>>({});
-  const [invoiceModelNumbers, setInvoiceModelNumbers] = useState<Record<string, string>>({});
-  const [invoiceHsnCodes, setInvoiceHsnCodes] = useState<Record<string, string>>({});
-  const [invoiceSerialNumbers, setInvoiceSerialNumbers] = useState<Record<string, string>>({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const tabs: OrderStatus[] = ['New', 'Accepted', 'Out for Delivery', 'Completed', 'Cancelled'];
+  }, [currentPage, activeTab, searchQuery]);
 
   const filteredOrders = orders.filter(order => {
     if (order.status !== activeTab) return false;
@@ -79,9 +100,7 @@ const Orders = () => {
     );
   });
 
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage) || 1;
-  const paginatedOrders = filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const paginatedOrders = filteredOrders;
 
   const showTrackColumn = activeTab === 'Accepted' || activeTab === 'Out for Delivery' || activeTab === 'Completed';
 
@@ -312,7 +331,7 @@ const Orders = () => {
     if (action === 'Reject') {
       actionText = 'reject this order';
       successText = 'The order has been rejected.';
-      nextStatus = 'Completed';
+      nextStatus = 'Cancelled';
       confirmColor = 'var(--danger)';
     } else if (action === 'Accept') {
       actionText = 'accept this order';
@@ -339,10 +358,22 @@ const Orders = () => {
       confirmButtonColor: confirmColor,
       cancelButtonColor: 'var(--text-muted)',
       confirmButtonText: 'Yes'
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        setOrders(orders.map(o => o.id === orderId ? { ...o, status: nextStatus } : o));
-        Swal.fire('Updated!', successText, 'success');
+        try {
+          const dbStatus = nextStatus === 'Accepted' ? 'ACCEPTED'
+            : nextStatus === 'Out for Delivery' ? 'OUT_FOR_DELIVERY'
+            : nextStatus === 'Completed' ? 'COMPLETED'
+            : (nextStatus === 'Cancelled' || (nextStatus as any) === 'Rejected') ? 'CANCELLED'
+            : 'NEW';
+
+          await API.put(`/vendor/orders/${orderId}/status`, { status: dbStatus });
+          setOrders(orders.map(o => o.id === orderId ? { ...o, status: nextStatus } : o));
+          Swal.fire('Updated!', successText, 'success');
+        } catch (err: any) {
+          console.error('Failed to update order status', err);
+          Swal.fire('Error', err.response?.data?.message || 'Failed to update order status. Please try again.', 'error');
+        }
       }
     });
   };
@@ -410,7 +441,7 @@ const Orders = () => {
       <div className="bg-blob blob-2"></div>
 
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="page-title mb-0">Product Orders</h2>
+        <h2 className="page-title mb-0">Product Orders <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-muted)' }}>({totalOrdersCount} Total)</span></h2>
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
           {activeTab === 'Completed' && (
             <select 
@@ -470,7 +501,6 @@ const Orders = () => {
                   <th>Order ID</th>
                   <th>Ordered Date</th>
                   <th>User</th>
-                  <th>Contact</th>
                   <th>Address</th>
                   <th>Products</th>
                   <th>Total Amount</th>
@@ -483,7 +513,7 @@ const Orders = () => {
               <tbody>
                 {paginatedOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={showTrackColumn ? 11 : 10} style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+                    <td colSpan={showTrackColumn ? 10 : 9} style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
                       No orders found in {activeTab}
                     </td>
                   </tr>
@@ -493,7 +523,6 @@ const Orders = () => {
                       <td className="font-weight-600" style={{ color: 'var(--primary)' }}>{order.id}</td>
                       <td>{order.date}</td>
                       <td>{order.user}</td>
-                      <td>{order.mobile}</td>
                       <td style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={order.address}>
                         {order.address}
                       </td>
