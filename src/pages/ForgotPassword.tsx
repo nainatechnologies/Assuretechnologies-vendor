@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,80 +6,84 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import API from '../services/api';
 import './Login.css';
-import { MdEmail, MdLock, MdKey, MdArrowBack } from 'react-icons/md';
+import { MdPhone, MdLock, MdKey, MdArrowBack } from 'react-icons/md';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
-// Step 1: Identifier Schema (Email or 10-digit Mobile)
+// Step 1: Mobile Schema (10-digit Indian mobile number matching backend)
 const step1Schema = z.object({
-  identifier: z
+  mobile: z
     .string()
     .trim()
-    .min(1, 'Email or mobile number is required')
-    .refine((val) => {
-      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-      const isMobile = /^[6-9]\d{9}$/.test(val);
-      return isEmail || isMobile;
-    }, 'Please enter a valid email address or 10-digit mobile number')
+    .regex(/^[6-9]\d{9}$/, 'Please enter a valid 10-digit mobile number')
 });
 type Step1Inputs = z.infer<typeof step1Schema>;
 
-// Step 2: OTP Schema
-const step2Schema = z.object({
-  otp: z
-    .string()
-    .trim()
-    .length(6, 'Please enter the 6-digit OTP code')
-});
-type Step2Inputs = z.infer<typeof step2Schema>;
-
-// Step 3: Password Schema
-const step3Schema = z
+// Step 2: Reset Password Schema (OTP + New Password + Confirm Password)
+const step2Schema = z
   .object({
+    otp: z
+      .string()
+      .trim()
+      .length(6, 'Please enter the 6-digit OTP code'),
     newPassword: z
       .string()
       .min(8, 'Password must be at least 8 characters')
+      .max(72, 'Password must be at most 72 characters')
       .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
       .regex(/[a-z]/, 'Must contain at least one lowercase letter')
       .regex(/\d/, 'Must contain at least one number')
       .regex(/[^A-Za-z0-9]/, 'Must contain at least one special character'),
-    confirmPassword: z.string().min(1, 'Please confirm your password')
+    confirmPassword: z.string().min(1, 'Please confirm your new password')
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: 'Passwords do not match',
     path: ['confirmPassword']
   });
-type Step3Inputs = z.infer<typeof step3Schema>;
+type Step2Inputs = z.infer<typeof step2Schema>;
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [identifier, setIdentifier] = useState('');
-  const [verifiedOtp, setVerifiedOtp] = useState('');
+  const [step, setStep] = useState<1 | 2>(1);
+  const [mobile, setMobile] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
 
-  // Forms for each step
-  const formStep1 = useForm<Step1Inputs>({ resolver: zodResolver(step1Schema) });
-  const formStep2 = useForm<Step2Inputs>({ resolver: zodResolver(step2Schema) });
-  const formStep3 = useForm<Step3Inputs>({ resolver: zodResolver(step3Schema) });
+  // Forms
+  const formStep1 = useForm<Step1Inputs>({
+    resolver: zodResolver(step1Schema),
+    defaultValues: { mobile: '' }
+  });
 
-  // Step 1: Submit Identifier -> Send OTP
+  const formStep2 = useForm<Step2Inputs>({
+    resolver: zodResolver(step2Schema),
+    defaultValues: { otp: '', newPassword: '', confirmPassword: '' }
+  });
+
+  // Resend Countdown Timer
+  useEffect(() => {
+    if (resendCountdown <= 0) return;
+    const interval = setInterval(() => {
+      setResendCountdown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendCountdown]);
+
+  // Step 1: Submit Mobile -> Send OTP
   const onStep1Submit = async (data: Step1Inputs) => {
     setLoading(true);
-    const cleanVal = data.identifier.trim();
-    const payload = cleanVal.includes('@')
-      ? { email: cleanVal.toLowerCase() }
-      : { mobile: cleanVal };
+    const cleanMobile = data.mobile.trim();
 
     try {
-      const res = await API.post('/auth/vendor/forgot-password', payload);
+      const res = await API.post('/auth/vendor/forgot-password', { mobile: cleanMobile });
       if (res.data.success) {
-        setIdentifier(cleanVal);
+        setMobile(cleanMobile);
+        setResendCountdown(30); // 30s cooldown matching backend rate limit
         Swal.fire({
           icon: 'success',
           title: 'OTP Sent!',
-          text: 'A 6-digit code has been sent. (Use demo OTP: 123456)',
+          text: res.data.message || 'A 6-digit verification code has been sent to your mobile number.',
           timer: 2000,
           showConfirmButton: false
         }).then(() => {
@@ -88,48 +92,66 @@ const ForgotPassword = () => {
       }
     } catch (err: any) {
       console.error('Forgot Password Error:', err);
-      formStep1.setError('identifier', {
-        type: 'server',
-        message: err.response?.data?.message || 'Vendor account not found with this email / mobile.'
-      });
+      const serverMessage = err.response?.data?.message;
+      if (err.response?.status === 429) {
+        Swal.fire({
+          title: 'Please Wait',
+          text: serverMessage || 'Please wait 30 seconds before requesting another OTP.',
+          icon: 'warning',
+          confirmButtonColor: '#2563EB'
+        });
+      } else {
+        formStep1.setError('mobile', {
+          type: 'server',
+          message: serverMessage || 'Vendor account not found with this mobile number.'
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Step 2: Submit OTP -> Verify
-  const onStep2Submit = async (data: Step2Inputs) => {
+  // Resend OTP Action
+  const handleResendOtp = async () => {
+    if (resendCountdown > 0 || !mobile || loading) return;
     setLoading(true);
-    const payload = identifier.includes('@')
-      ? { email: identifier.toLowerCase(), otp: data.otp }
-      : { mobile: identifier, otp: data.otp };
 
     try {
-      const res = await API.post('/auth/vendor/verify-reset-otp', payload);
+      const res = await API.post('/auth/vendor/forgot-password', { mobile });
       if (res.data.success) {
-        setVerifiedOtp(data.otp);
-        setStep(3);
+        setResendCountdown(30);
+        Swal.fire({
+          icon: 'success',
+          title: 'OTP Resent!',
+          text: 'A new 6-digit OTP code has been sent to your mobile number.',
+          timer: 2000,
+          showConfirmButton: false
+        });
       }
     } catch (err: any) {
-      console.error('Verify OTP Error:', err);
-      formStep2.setError('otp', {
-        type: 'server',
-        message: err.response?.data?.message || 'Invalid or expired OTP. Use 123456.'
+      console.error('Resend OTP Error:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to Resend',
+        text: err.response?.data?.message || 'Unable to send OTP. Please try again later.',
+        confirmButtonColor: '#EF4444'
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // Step 3: Submit New Password
-  const onStep3Submit = async (data: Step3Inputs) => {
+  // Step 2: Submit OTP + New Password -> Reset Password
+  const onStep2Submit = async (data: Step2Inputs) => {
     setLoading(true);
-    const payload = identifier.includes('@')
-      ? { email: identifier.toLowerCase(), otp: verifiedOtp, newPassword: data.newPassword }
-      : { mobile: identifier, otp: verifiedOtp, newPassword: data.newPassword };
 
     try {
-      const res = await API.post('/auth/vendor/reset-password', payload);
+      const res = await API.post('/auth/vendor/reset-password', {
+        mobile,
+        otp: data.otp.trim(),
+        newPassword: data.newPassword
+      });
+
       if (res.data.success) {
         Swal.fire({
           title: 'Success!',
@@ -143,12 +165,29 @@ const ForgotPassword = () => {
       }
     } catch (err: any) {
       console.error('Reset Password Error:', err);
-      Swal.fire({
-        title: 'Reset Failed',
-        text: err.response?.data?.message || 'Failed to reset password. Please try again.',
-        icon: 'error',
-        confirmButtonColor: '#EF4444'
-      });
+      const serverMessage = err.response?.data?.message;
+
+      if (serverMessage?.toLowerCase().includes('otp')) {
+        formStep2.setError('otp', {
+          type: 'server',
+          message: serverMessage || 'Invalid or expired OTP. Please check and try again.'
+        });
+      } else if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        err.response.data.errors.forEach((e: any) => {
+          if (e.field === 'newPassword') {
+            formStep2.setError('newPassword', { type: 'server', message: e.message });
+          } else if (e.field === 'otp') {
+            formStep2.setError('otp', { type: 'server', message: e.message });
+          }
+        });
+      } else {
+        Swal.fire({
+          title: 'Reset Failed',
+          text: serverMessage || 'Failed to reset password. Please try again.',
+          icon: 'error',
+          confirmButtonColor: '#EF4444'
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -159,38 +198,37 @@ const ForgotPassword = () => {
       <div className="login-box">
         <div className="login-header text-center mb-4">
           <div className="vendor-logo-wrapper">
-            <MdKey className="vendor-logo-icon" />
+            {step === 1 ? <MdKey className="vendor-logo-icon" /> : <MdLock className="vendor-logo-icon" />}
           </div>
           <h2 className="login-title mb-0">
-            {step === 1 && 'Forgot Password'}
-            {step === 2 && 'Verify OTP'}
-            {step === 3 && 'Set New Password'}
+            {step === 1 ? 'Forgot Password' : 'Set New Password'}
           </h2>
           <p className="login-subtitle mt-2">
-            {step === 1 && 'Enter your registered vendor email or mobile number.'}
-            {step === 2 && `Enter the 6-digit code sent to ${identifier}`}
-            {step === 3 && 'Choose a strong password for your vendor account.'}
+            {step === 1
+              ? 'Enter your registered 10-digit mobile number to receive an OTP.'
+              : `Enter the 6-digit code sent to +91 ${mobile} and choose your new password.`}
           </p>
         </div>
 
-        {/* Step 1: Identifier */}
+        {/* Step 1: Enter Mobile Number */}
         {step === 1 && (
           <form onSubmit={formStep1.handleSubmit(onStep1Submit)} className="login-form" noValidate>
             <div className="form-group">
-              <label htmlFor="identifier">Email or Mobile Number</label>
+              <label htmlFor="mobile">Mobile Number</label>
               <div className="input-icon-wrapper">
-                <MdEmail className="input-icon" />
+                <MdPhone className="input-icon" />
                 <input
-                  type="text"
-                  id="identifier"
-                  className={`form-control with-icon ${formStep1.formState.errors.identifier ? 'input-error' : ''}`}
-                  placeholder="e.g. vendor@example.com or 9876543210"
-                  {...formStep1.register('identifier')}
+                  type="tel"
+                  id="mobile"
+                  maxLength={10}
+                  className={`form-control with-icon ${formStep1.formState.errors.mobile ? 'input-error' : ''}`}
+                  placeholder="Enter 10-digit mobile (e.g. 9876543210)"
+                  {...formStep1.register('mobile')}
                 />
               </div>
-              {formStep1.formState.errors.identifier && (
+              {formStep1.formState.errors.mobile && (
                 <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>
-                  {formStep1.formState.errors.identifier.message}
+                  {formStep1.formState.errors.mobile.message}
                 </span>
               )}
             </div>
@@ -200,16 +238,28 @@ const ForgotPassword = () => {
             </button>
 
             <div className="text-center mt-3">
-              <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
+              <Link
+                to="/login"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: 'var(--primary)',
+                  textDecoration: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 600
+                }}
+              >
                 <MdArrowBack /> Back to Sign In
               </Link>
             </div>
           </form>
         )}
 
-        {/* Step 2: OTP */}
+        {/* Step 2: OTP + New Password */}
         {step === 2 && (
           <form onSubmit={formStep2.handleSubmit(onStep2Submit)} className="login-form" noValidate>
+            {/* 6-Digit OTP */}
             <div className="form-group">
               <label htmlFor="otp">6-Digit OTP Code</label>
               <div className="input-icon-wrapper">
@@ -219,9 +269,9 @@ const ForgotPassword = () => {
                   id="otp"
                   maxLength={6}
                   className={`form-control with-icon ${formStep2.formState.errors.otp ? 'input-error' : ''}`}
-                  placeholder="123456"
+                  placeholder="Enter 6-digit OTP"
                   {...formStep2.register('otp')}
-                  style={{ letterSpacing: '4px', fontSize: '1.1rem', fontWeight: 700 }}
+                  style={{ letterSpacing: '4px', fontSize: '1.05rem', fontWeight: 600 }}
                 />
               </div>
               {formStep2.formState.errors.otp && (
@@ -231,32 +281,7 @@ const ForgotPassword = () => {
               )}
             </div>
 
-            <button type="submit" className="btn btn-primary w-100 mt-4" disabled={loading}>
-              {loading ? 'Verifying...' : 'Verify OTP'}
-            </button>
-
-            <div className="d-flex justify-content-between align-items-center mt-3" style={{ fontSize: '0.85rem' }}>
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
-              >
-                Change Email/Mobile
-              </button>
-              <button
-                type="button"
-                onClick={() => Swal.fire('OTP Resent', 'Use demo OTP: 123456', 'info')}
-                style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600, padding: 0 }}
-              >
-                Resend OTP
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Step 3: Password */}
-        {step === 3 && (
-          <form onSubmit={formStep3.handleSubmit(onStep3Submit)} className="login-form" noValidate>
+            {/* New Password */}
             <div className="form-group">
               <label htmlFor="newPassword">New Password</label>
               <div className="input-icon-wrapper" style={{ position: 'relative' }}>
@@ -264,27 +289,41 @@ const ForgotPassword = () => {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id="newPassword"
-                  className={`form-control with-icon ${formStep3.formState.errors.newPassword ? 'input-error' : ''}`}
-                  placeholder="At least 8 chars (A-Z, a-z, 0-9, @#$)"
-                  {...formStep3.register('newPassword')}
+                  className={`form-control with-icon ${formStep2.formState.errors.newPassword ? 'input-error' : ''}`}
+                  placeholder="Min 8 chars (A-Z, a-z, 0-9, special)"
+                  {...formStep2.register('newPassword')}
                   style={{ paddingRight: '42px' }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '4px'
+                  }}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <FaEyeSlash size={17} /> : <FaEye size={17} />}
                 </button>
               </div>
-              {formStep3.formState.errors.newPassword && (
+              {formStep2.formState.errors.newPassword && (
                 <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>
-                  {formStep3.formState.errors.newPassword.message}
+                  {formStep2.formState.errors.newPassword.message}
                 </span>
               )}
             </div>
 
+            {/* Confirm New Password */}
             <div className="form-group">
               <label htmlFor="confirmPassword">Confirm New Password</label>
               <div className="input-icon-wrapper" style={{ position: 'relative' }}>
@@ -292,23 +331,36 @@ const ForgotPassword = () => {
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   id="confirmPassword"
-                  className={`form-control with-icon ${formStep3.formState.errors.confirmPassword ? 'input-error' : ''}`}
+                  className={`form-control with-icon ${formStep2.formState.errors.confirmPassword ? 'input-error' : ''}`}
                   placeholder="Re-enter new password"
-                  {...formStep3.register('confirmPassword')}
+                  {...formStep2.register('confirmPassword')}
                   style={{ paddingRight: '42px' }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '4px'
+                  }}
                   aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                 >
                   {showConfirmPassword ? <FaEyeSlash size={17} /> : <FaEye size={17} />}
                 </button>
               </div>
-              {formStep3.formState.errors.confirmPassword && (
+              {formStep2.formState.errors.confirmPassword && (
                 <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>
-                  {formStep3.formState.errors.confirmPassword.message}
+                  {formStep2.formState.errors.confirmPassword.message}
                 </span>
               )}
             </div>
@@ -316,6 +368,44 @@ const ForgotPassword = () => {
             <button type="submit" className="btn btn-primary w-100 mt-4" disabled={loading}>
               {loading ? 'Resetting Password...' : 'Reset Password'}
             </button>
+
+            <div
+              className="d-flex justify-content-between align-items-center mt-3"
+              style={{ fontSize: '0.85rem' }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setStep(1);
+                  formStep2.reset();
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: 0
+                }}
+              >
+                ← Change Mobile Number
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={resendCountdown > 0 || loading}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: resendCountdown > 0 ? 'var(--text-light, #94a3b8)' : 'var(--primary)',
+                  cursor: resendCountdown > 0 ? 'not-allowed' : 'pointer',
+                  fontWeight: 600,
+                  padding: 0
+                }}
+              >
+                {resendCountdown > 0 ? `Resend OTP in ${resendCountdown}s` : 'Resend OTP'}
+              </button>
+            </div>
           </form>
         )}
       </div>
