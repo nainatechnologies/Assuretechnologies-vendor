@@ -20,7 +20,7 @@ const Layout = () => {
   const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault();
     try {
-      await API.post('/auth/vendor/logout');
+      await API.post('/auth/logout');
     } catch (err) {
       console.error('Logout API error:', err);
     }
