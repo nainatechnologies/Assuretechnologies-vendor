@@ -14,9 +14,9 @@ const profileSchema = z.object({
   mobile: z.string().optional(),
   email: z.string().optional(),
   gstNumber: z.string().length(15, 'GST number must be exactly 15 characters'),
-  address: z.string().min(10, 'Address must be at least 10 characters'),
-  pincode: z.string().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits'),
-  businessDescription: z.string().optional()
+  address: z.string().min(3, 'Address must be at least 3 characters'),
+  pincode: z.string().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits').optional().or(z.literal('')),
+  businessDescription: z.string().optional().or(z.literal(''))
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -49,7 +49,8 @@ const Profile = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const data = await getProfile();
+        const res = await getProfile();
+        const data = res?.data || res;
         setOriginalName(data.business_name || 'Business Name');
         reset({
           name: data.full_name || '',
@@ -90,12 +91,12 @@ const Profile = () => {
         showConfirmButton: false
       });
       setIsEditing(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save profile', error);
       Swal.fire({
         icon: 'error',
         title: 'Update Failed',
-        text: 'There was an issue saving your profile. Please try again.',
+        text: error?.response?.data?.message || 'There was an issue saving your profile. Please try again.',
       });
     } finally {
       setSaving(false);
@@ -106,7 +107,8 @@ const Profile = () => {
     setIsEditing(false);
     // Refetch to clear un-saved changes
     try {
-      const data = await getProfile();
+      const res = await getProfile();
+      const data = res?.data || res;
       reset({
         name: data.full_name || '',
         businessName: data.business_name || '',

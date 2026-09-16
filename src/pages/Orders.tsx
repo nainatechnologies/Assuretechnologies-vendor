@@ -64,9 +64,9 @@ const Orders = () => {
         });
       });
       setOrders(fetchedOrders);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch orders', error);
-      Swal.fire('Error', 'Failed to fetch orders', 'error');
+      Swal.fire('Error', error?.response?.data?.message || 'Failed to fetch orders', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -329,11 +329,45 @@ const Orders = () => {
     let confirmColor = 'var(--primary)';
 
     if (action === 'Reject') {
-      actionText = 'reject this order';
-      successText = 'The order has been rejected.';
-      nextStatus = 'Cancelled';
-      confirmColor = 'var(--danger)';
-    } else if (action === 'Accept') {
+      Swal.fire({
+        title: 'Reject Order?',
+        text: 'Please select a reason for rejecting this order (this will queue a customer refund):',
+        input: 'select',
+        inputOptions: {
+          'Out of stock': 'Out of stock',
+          'Damaged / Defective inventory': 'Damaged / Defective inventory',
+          'Delivery location unserviceable': 'Delivery location unserviceable',
+          'Pricing error': 'Pricing error',
+          'Other': 'Other reason'
+        },
+        inputPlaceholder: 'Select rejection reason',
+        showCancelButton: true,
+        confirmButtonColor: 'var(--danger)',
+        cancelButtonColor: 'var(--text-muted)',
+        confirmButtonText: 'Confirm Rejection',
+        inputValidator: (value) => {
+          if (!value) return 'Please select a reason for rejection!';
+          return null;
+        }
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            await API.put(`/vendor/orders/${orderId}/status`, { 
+              status: 'CANCELLED',
+              reason: result.value
+            });
+            setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'Cancelled' } : o));
+            Swal.fire('Order Rejected', 'The order has been rejected and queued for customer refund.', 'success');
+          } catch (err: any) {
+            console.error('Failed to update order status', err);
+            Swal.fire('Error', err.response?.data?.message || 'Failed to update order status. Please try again.', 'error');
+          }
+        }
+      });
+      return;
+    }
+
+    if (action === 'Accept') {
       actionText = 'accept this order';
       successText = 'Order status updated to Accepted.';
       nextStatus = 'Accepted';
@@ -364,7 +398,7 @@ const Orders = () => {
           const dbStatus = nextStatus === 'Accepted' ? 'ACCEPTED'
             : nextStatus === 'Out for Delivery' ? 'OUT_FOR_DELIVERY'
             : nextStatus === 'Completed' ? 'COMPLETED'
-            : (nextStatus === 'Cancelled' || (nextStatus as any) === 'Rejected') ? 'CANCELLED'
+            : (nextStatus === 'Cancelled' || nextStatus === 'Rejected') ? 'CANCELLED'
             : 'NEW';
 
           await API.put(`/vendor/orders/${orderId}/status`, { status: dbStatus });

@@ -91,9 +91,9 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
       });
       fetchProducts();
       Swal.fire('Success', 'Product added successfully', 'success');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to add product:', error);
-      Swal.fire('Error', 'Failed to add product', 'error');
+      Swal.fire('Error', error?.response?.data?.message || 'Failed to add product', 'error');
     }
   };
 
@@ -119,9 +119,9 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       fetchProducts();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update product:', error);
-      Swal.fire('Error', 'Failed to update product', 'error');
+      Swal.fire('Error', error?.response?.data?.message || 'Failed to update product', 'error');
     }
   };
 
@@ -137,8 +137,9 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
           p.id === id ? { ...p, status: newStatusUI } : p
         )
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to toggle status:', error);
+      Swal.fire('Error', error?.response?.data?.message || 'Failed to toggle product status', 'error');
     }
   };
 
@@ -146,9 +147,9 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
     try {
       await API.delete(`/vendor/products/${id}`);
       fetchProducts();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete product:', error);
-      Swal.fire('Error', 'Failed to delete product', 'error');
+      Swal.fire('Error', error?.response?.data?.message || 'Failed to delete product', 'error');
     }
   };
 
