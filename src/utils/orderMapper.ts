@@ -30,6 +30,7 @@ export interface Order {
 }
 
 export const mapApiOrderToOrder = (o: any, items: any[], totalAmount: number, extraTransportData?: { transportName?: string; trackId?: string; trackUrl?: string }): Order => {
+  const effectiveStatus = items[0]?.status || o.status;
   return {
     id: o.order_number || o.id,
     date: new Date(o.createdAt).toLocaleString(),
@@ -43,10 +44,10 @@ export const mapApiOrderToOrder = (o: any, items: any[], totalAmount: number, ex
     totalAmount: totalAmount,
     paymentMethod: 'Online',
     paymentStatus: o.payment_status === 'PAID' ? 'Paid' : 'Pending',
-    status: o.status === 'NEW' ? 'New' : o.status === 'ACCEPTED' ? 'Accepted' : o.status === 'OUT_FOR_DELIVERY' ? 'Out for Delivery' : o.status === 'COMPLETED' ? 'Completed' : o.status === 'CANCELLED' ? 'Cancelled' : 'Rejected',
-    transportName: extraTransportData?.transportName || o.transport_name || undefined,
-    trackId: extraTransportData?.trackId || o.tracking_id || undefined,
-    trackUrl: extraTransportData?.trackUrl || o.tracking_url || undefined,
+    status: effectiveStatus === 'NEW' ? 'New' : effectiveStatus === 'ACCEPTED' ? 'Accepted' : effectiveStatus === 'OUT_FOR_DELIVERY' ? 'Out for Delivery' : effectiveStatus === 'COMPLETED' ? 'Completed' : effectiveStatus === 'CANCELLED' ? 'Cancelled' : 'Rejected',
+    transportName: extraTransportData?.transportName || (items[0]?.transport_name || o.transport_name || undefined),
+    trackId: extraTransportData?.trackId || (items[0]?.tracking_id || o.tracking_id || undefined),
+    trackUrl: extraTransportData?.trackUrl || (items[0]?.tracking_url || o.tracking_url || undefined),
     items: items.map((i: any) => ({
       id: i.id,
       productName: i.product?.name || 'Unknown',
