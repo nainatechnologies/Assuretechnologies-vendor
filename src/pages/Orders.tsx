@@ -398,7 +398,6 @@ const Orders = () => {
           const dbStatus = nextStatus === 'Accepted' ? 'ACCEPTED'
             : nextStatus === 'Out for Delivery' ? 'OUT_FOR_DELIVERY'
             : nextStatus === 'Completed' ? 'COMPLETED'
-            : (nextStatus === 'Cancelled' || nextStatus === 'Rejected') ? 'CANCELLED'
             : 'NEW';
 
           await API.put(`/vendor/orders/${orderId}/status`, { status: dbStatus });
