@@ -29,6 +29,16 @@ export interface Order {
   items: OrderItem[];
 }
 
+const cleanAddress = (rawAddress?: string): string => {
+  if (!rawAddress) return 'N/A';
+  const cleaned = rawAddress
+    .split(',')
+    .map((s: string) => s.trim())
+    .filter(Boolean)
+    .join(', ');
+  return cleaned || 'N/A';
+};
+
 export const mapApiOrderToOrder = (o: any, items: any[], totalAmount: number, extraTransportData?: { transportName?: string; trackId?: string; trackUrl?: string }): Order => {
   const effectiveStatus = items[0]?.status || o.status;
   return {
@@ -37,7 +47,7 @@ export const mapApiOrderToOrder = (o: any, items: any[], totalAmount: number, ex
     user: o.customer?.full_name || o.customer_name || 'N/A',
     mobile: o.customer?.mobile || o.customer_contact || 'N/A',
     email: o.customer?.email || 'N/A',
-    address: o.customer_address || 'N/A',
+    address: cleanAddress(o.customer_address),
     companyName: o.company_name || undefined,
     gstNumber: o.gst_number || undefined,
     pincode: o.customer?.pincode || 'N/A',

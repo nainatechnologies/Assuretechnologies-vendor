@@ -89,9 +89,6 @@ const Orders = () => {
     return (
       order.id.toLowerCase().includes(query) ||
       order.date.toLowerCase().includes(query) ||
-      order.user.toLowerCase().includes(query) ||
-      order.mobile.toLowerCase().includes(query) ||
-      order.email.toLowerCase().includes(query) ||
       order.address.toLowerCase().includes(query) ||
       order.pincode.toLowerCase().includes(query) ||
       order.totalAmount.toString().includes(query) ||
@@ -533,7 +530,6 @@ const Orders = () => {
                 <tr>
                   <th>Order ID</th>
                   <th>Ordered Date</th>
-                  <th>User</th>
                   <th>Address</th>
                   <th>Products</th>
                   <th>Total Amount</th>
@@ -546,7 +542,7 @@ const Orders = () => {
               <tbody>
                 {paginatedOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={showTrackColumn ? 10 : 9} style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+                    <td colSpan={showTrackColumn ? 9 : 8} style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
                       No orders found in {activeTab}
                     </td>
                   </tr>
@@ -555,8 +551,7 @@ const Orders = () => {
                     <tr key={order.id}>
                       <td className="font-weight-600" style={{ color: 'var(--primary)' }}>{order.id}</td>
                       <td>{order.date}</td>
-                      <td>{order.user}</td>
-                      <td style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={order.address}>
+                      <td style={{ maxWidth: '240px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={order.address}>
                         {order.address}
                       </td>
                       <td>
@@ -646,12 +641,8 @@ const Orders = () => {
             <h2 style={{ marginTop: 0, marginBottom: '20px', color: '#1e293b' }}>Generate Invoice for Order: {showInvoiceModal.id}</h2>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px', background: '#f8fafc', padding: '16px', borderRadius: '8px' }}>
-              <div><strong>Customer Name:</strong> {showInvoiceModal.user}</div>
-              <div><strong>Mobile:</strong> {showInvoiceModal.mobile}</div>
-              <div><strong>Email:</strong> {showInvoiceModal.email}</div>
-              <div><strong>Address:</strong> {showInvoiceModal.address}</div>
-              {showInvoiceModal.companyName && <div><strong>Company:</strong> {showInvoiceModal.companyName}</div>}
-              {showInvoiceModal.gstNumber && <div><strong>GST Number:</strong> {showInvoiceModal.gstNumber}</div>}
+              <div><strong>Order ID:</strong> {showInvoiceModal.id}</div>
+              <div><strong>Delivery Address:</strong> {showInvoiceModal.address}</div>
             </div>
 
             <form onSubmit={submitInvoice}>
