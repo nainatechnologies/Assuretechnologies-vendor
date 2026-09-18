@@ -144,7 +144,7 @@ const Dashboard = () => {
               <tr>
                 <th>Order ID</th>
                 <th>Ordered Date</th>
-                <th>User</th>
+                <th>Address</th>
                 <th>Amount</th>
                 <th>Payment</th>
                 <th style={{ textAlign: 'center' }}>Action</th>
@@ -162,7 +162,9 @@ const Dashboard = () => {
                   <tr key={index}>
                     <td className="font-weight-500">{order.id}</td>
                     <td>{order.date}</td>
-                    <td>{order.user}</td>
+                    <td style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={order.address}>
+                      {order.address}
+                    </td>
                     <td className="font-weight-500">₹{order.totalAmount.toFixed(2)}</td>
                     <td>
                       <div className="d-flex" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
